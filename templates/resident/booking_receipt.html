@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Booking Receipt - {{ booking.booking_id }}{% endblock %}
+{% block page_title %}Official Slot Receipt{% endblock %}
+{% block page_subtitle %}Approved reservation permit for {{ booking.amenity_name }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+  <a href="{{ url_for('resident.bookings') }}" class="btn btn-secondary btn-sm">
+    <i class="fa-solid fa-arrow-left"></i> Back to My Bookings
+  </a>
+  <div style="display: flex; gap: 10px;">
+    <button onclick="window.print()" class="btn btn-secondary btn-sm">
+      <i class="fa-solid fa-print"></i> Print Receipt
+    </button>
+    <a href="{{ url_for('resident.download_booking_pdf', booking_id=booking.booking_id) }}" class="btn btn-primary btn-sm">
+      <i class="fa-solid fa-file-arrow-down"></i> Download Official PDF
+    </a>
+  </div>
+</div>
+
+<!-- Slot Receipt (Section 23) -->
+<div class="receipt-wrapper">
+  <div class="receipt-header">
+    <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #2563eb, #6366f1); border-radius: 12px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.4rem;">
+      <i class="fa-solid fa-city"></i>
+    </div>
+    <h2 style="font-family: var(--font-display); font-size: 1.35rem; color: #0f172a; margin-bottom: 2px;">GREENWOOD ESTATES</h2>
+    <p style="font-size: 0.85rem; color: #64748b; font-weight: 500;">Apartment Residential Management Portal</p>
+    <div style="margin-top: 14px; display: inline-block; background: #ecfdf5; border: 1px solid #a7f3d0; color: #166534; padding: 4px 16px; border-radius: 20px; font-weight: 700; font-size: 0.8rem; letter-spacing: 0.04em;">
+      <i class="fa-solid fa-circle-check"></i> OFFICIAL AMENITY BOOKING RECEIPT
+    </div>
+  </div>
+
+  <div style="margin-top: 24px;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; background: #f8fafc; padding: 14px 18px; border-radius: 8px; margin-bottom: 20px;">
+      <div>
+        <span style="font-size: 0.72rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Receipt Number</span>
+        <div style="font-weight: 700; font-size: 1rem; color: #0f172a;">{{ booking.receipt_number or ('RCP-' ~ booking.booking_id) }}</div>
+      </div>
+      <div>
+        <span style="font-size: 0.72rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Booking Reference</span>
+        <div style="font-weight: 700; font-size: 1rem; color: #2563eb;">{{ booking.booking_id }}</div>
+      </div>
+    </div>
+
+    <!-- Booking Attributes Table -->
+    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Resident Name</td>
+        <td style="padding: 10px 0; text-align: right; font-weight: 700;">{{ booking.resident_name }}</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Flat & Block</td>
+        <td style="padding: 10px 0; text-align: right; font-weight: 700;">Block {{ booking.block }} - Flat {{ booking.flat }}</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Amenity Reserved</td>
+        <td style="padding: 10px 0; text-align: right; font-weight: 700; color: #2563eb;">{{ booking.amenity_name }}</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Reservation Date</td>
+        <td style="padding: 10px 0; text-align: right; font-weight: 700;">{{ booking.booking_date }}</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Reserved Time Slot</td>
+        <td style="padding: 10px 0; text-align: right; font-weight: 700;">{{ booking.start_time }} to {{ booking.end_time }}</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Event Purpose</td>
+        <td style="padding: 10px 0; text-align: right;">{{ booking.purpose }}</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Expected Guests</td>
+        <td style="padding: 10px 0; text-align: right; font-weight: 700;">{{ booking.guests_count }} People</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Booking Status</td>
+        <td style="padding: 10px 0; text-align: right;">
+          <span class="badge-status badge-approved">APPROVED</span>
+        </td>
+      </tr>
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Approved By</td>
+        <td style="padding: 10px 0; text-align: right; font-weight: 600;">
+          {{ booking.approval.approved_by_name or 'Apartment Management' }}
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Approval Timestamp</td>
+        <td style="padding: 10px 0; text-align: right; font-size: 0.82rem; color: #64748b;">
+          {{ booking.approval.approved_at | datetime_format }}
+        </td>
+      </tr>
+    </table>
+
+    <!-- QR Code Section -->
+    <div class="receipt-qr-card">
+      {% if booking.qr_code_data %}
+        <img src="{{ booking.qr_code_data }}" alt="Verification QR Code" class="receipt-qr-img">
+      {% else %}
+        <div style="width: 100px; height: 100px; background: #e2e8f0; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+          <i class="fa-solid fa-qrcode" style="font-size: 2rem; color: #94a3b8;"></i>
+        </div>
+      {% endif %}
+      <div>
+        <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin-bottom: 4px;">
+          Facility Access QR Verification
+        </h4>
+        <p style="font-size: 0.8rem; color: #64748b; line-height: 1.4;">
+          This cryptographically signed digital pass confirms official booking authorization. Present this QR code on your phone to the facility caretaker or security guard at entrance.
+        </p>
+        <span style="display: inline-block; font-size: 0.72rem; color: #2563eb; font-weight: 700; margin-top: 6px;">
+          <i class="fa-solid fa-shield-check"></i> SECURE DIGITAL PASS
+        </span>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 24px; font-size: 0.75rem; color: #94a3b8;">
+      Greenwood Estates Residential Welfare Association • System Generated Electronic Receipt
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,1041 @@
+{% extends "base.html" %}
+
+{% block title %}{{ vendor.company.name }} - Vendor Details - Greenwood Estates{% endblock %}
+{% block page_title %}{{ vendor.company.name }} ({{ vendor.vendor_id }}){% endblock %}
+{% block page_subtitle %}Vendor Profile, AMC Contracts, Service History, Invoices & Performance Evaluation{% endblock %}
+
+{% block content %}
+<!-- Contract Expiry Warnings -->
+{% if expiring_warnings %}
+  {% for w in expiring_warnings %}
+    <div class="alert alert-warning" style="background: #fffbeb; border: 1px solid #fde68a; border-left: 5px solid {% if w.warning_level == 'CRITICAL' %}#ef4444{% elif w.warning_level == 'HIGH' %}#f59e0b{% else %}#3b82f6{% endif %}; padding: 14px 18px; margin-bottom: 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.25rem; color: {% if w.warning_level == 'CRITICAL' %}#dc2626{% else %}#d97706{% endif %};"></i>
+        <div>
+          <strong style="color: #1e293b;">CONTRACT EXPIRY NOTICE:</strong>
+          <span style="color: #475569; margin-left: 4px;">{{ w.message }}</span>
+          <span style="font-size: 0.8rem; color: #64748b; margin-left: 8px;">(End Date: {{ w.end_date }})</span>
+        </div>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        {% if w.contract_id %}
+          <button type="button" class="btn btn-sm btn-warning" onclick="openRenewModal('{{ w.contract_id }}', '', '{{ w.end_date }}')">
+            <i class="fa-solid fa-arrows-rotate"></i> Renew Contract
+          </button>
+          <a href="{{ url_for('vendor.view_contract_pdf', contract_id=w.contract_id) }}" target="_blank" class="btn btn-sm btn-secondary">
+            <i class="fa-solid fa-file-pdf"></i> View PDF
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+{% endif %}
+
+<!-- Back link and Action Buttons -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+  <a href="{{ url_for('vendor.manager_vendors_list') }}" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 8px;">
+    <i class="fa-solid fa-arrow-left"></i> Back to Vendors
+  </a>
+  <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+    <button type="button" class="btn btn-secondary" onclick="openModal('editVendorModal')">
+      <i class="fa-solid fa-pen-to-square"></i> Edit Profile
+    </button>
+    <button type="button" class="btn btn-primary" onclick="openModal('newServiceModal')">
+      <i class="fa-solid fa-plus"></i> New Service Order
+    </button>
+    <button type="button" class="btn btn-success" onclick="openModal('newContractModal')">
+      <i class="fa-solid fa-file-contract"></i> Add Contract
+    </button>
+    <button type="button" class="btn btn-emerald" onclick="openModal('newPaymentModal')" style="background-color: #059669; color: white;">
+      <i class="fa-solid fa-credit-card"></i> Record Payment
+    </button>
+    <button type="button" class="btn btn-warning" onclick="openModal('statusChangeModal')">
+      <i class="fa-solid fa-sliders"></i> Change Status
+    </button>
+  </div>
+</div>
+
+<!-- Header Card / Profile Hero -->
+<div class="content-card" style="margin-bottom: 24px; padding: 24px; border-left: 5px solid {% if vendor.status == 'ACTIVE' %}#10b981{% elif vendor.status == 'INACTIVE' %}#64748b{% elif vendor.status == 'SUSPENDED' %}#f59e0b{% else %}#ef4444{% endif %};">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+        <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700; color: #1e293b;">{{ vendor.company.name }}</h2>
+        <span class="badge-status badge-{{ vendor.status.lower() }}">
+          {{ vendor.status }}
+        </span>
+        <span class="badge" style="background-color: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; font-size: 0.85rem; font-weight: 700; padding: 4px 8px; border-radius: 4px;">
+          {{ vendor.vendor_id }}
+        </span>
+      </div>
+      <p style="color: #64748b; margin: 0 0 12px 0; font-size: 0.95rem;">
+        <i class="fa-solid fa-tag" style="color: #6366f1; margin-right: 6px;"></i> Category: <strong>{{ vendor.service.category }}</strong>
+        {% if vendor.service.description %} • <span>{{ vendor.service.description }}</span>{% endif %}
+      </p>
+    </div>
+
+    <!-- Rating pill -->
+    <div style="text-align: right; background: #fafafa; border: 1px solid #e5e7eb; padding: 10px 16px; border-radius: 10px;">
+      <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 2px;">Overall Rating</div>
+      <div style="font-size: 1.25rem; font-weight: 700; color: #d97706; display: flex; align-items: center; justify-content: flex-end; gap: 5px;">
+        <i class="fa-solid fa-star"></i> {{ vendor.performance.average_rating if vendor.performance else '5.0' }}
+        <span style="font-size: 0.8rem; color: #64748b; font-weight: normal;">({{ vendor.performance.services_completed if vendor.performance else 0 }} completed)</span>
+      </div>
+    </div>
+  </div>
+
+  <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 16px 0;" />
+
+  <!-- Info Grid -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; font-size: 0.9rem;">
+    <div>
+      <span style="color: #64748b; display: block; font-size: 0.8rem;">Contact Person</span>
+      <span style="font-weight: 600; color: #1e293b;"><i class="fa-solid fa-user" style="color: #94a3b8; margin-right: 6px;"></i>{{ vendor.company.contact_person }}</span>
+    </div>
+    <div>
+      <span style="color: #64748b; display: block; font-size: 0.8rem;">Phone</span>
+      <span style="font-weight: 600; color: #1e293b;"><i class="fa-solid fa-phone" style="color: #94a3b8; margin-right: 6px;"></i>{{ vendor.company.phone }}</span>
+    </div>
+    <div>
+      <span style="color: #64748b; display: block; font-size: 0.8rem;">Email</span>
+      <span style="font-weight: 600; color: #1e293b;"><i class="fa-solid fa-envelope" style="color: #94a3b8; margin-right: 6px;"></i>{{ vendor.company.email or 'N/A' }}</span>
+    </div>
+    <div>
+      <span style="color: #64748b; display: block; font-size: 0.8rem;">Emergency Contact</span>
+      <span style="font-weight: 600; color: #dc2626;"><i class="fa-solid fa-phone-volume" style="color: #dc2626; margin-right: 6px;"></i>{{ vendor.emergency_contact or 'N/A' }}</span>
+    </div>
+    <div>
+      <span style="color: #64748b; display: block; font-size: 0.8rem;">City & State</span>
+      <span style="font-weight: 600; color: #1e293b;"><i class="fa-solid fa-location-dot" style="color: #94a3b8; margin-right: 6px;"></i>{{ vendor.company.city or 'N/A' }}, {{ vendor.company.state or 'N/A' }}</span>
+    </div>
+    <div>
+      <span style="color: #64748b; display: block; font-size: 0.8rem;">GST / Reg No.</span>
+      <span style="font-weight: 600; color: #1e293b;"><i class="fa-solid fa-file-invoice" style="color: #94a3b8; margin-right: 6px;"></i>{{ vendor.gst_number or 'N/A' }}</span>
+    </div>
+    <div>
+      <span style="color: #64748b; display: block; font-size: 0.8rem;">Availability</span>
+      <span style="font-weight: 600; color: #1e293b;"><i class="fa-solid fa-clock" style="color: #94a3b8; margin-right: 6px;"></i>{{ vendor.service.availability or '24x7 Emergency Support' }}</span>
+    </div>
+    <div>
+      <span style="color: #64748b; display: block; font-size: 0.8rem;">Active AMC Contract</span>
+      <span style="font-weight: 600; color: #2563eb;">
+        {% if vendor.contract and vendor.contract.amount %}
+          ₹{{ "{:,.0f}".format(vendor.contract.amount) }} / {{ vendor.contract.payment_frequency }}
+        {% else %}
+          <span style="color: #64748b;">No active AMC</span>
+        {% endif %}
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- Tabs Interface -->
+<div class="tabs-container" style="margin-bottom: 24px;">
+  <div class="tabs-header" style="display: flex; gap: 8px; border-bottom: 2px solid #e2e8f0; overflow-x: auto; padding-bottom: 4px;">
+    <button type="button" class="tab-btn {% if active_tab == 'overview' or active_tab == 'contracts' %}active{% endif %}" onclick="switchTab(event, 'tab-contracts')">
+      <i class="fa-solid fa-file-contract"></i> Contracts ({{ contracts|length }})
+    </button>
+    <button type="button" class="tab-btn {% if active_tab == 'services' %}active{% endif %}" onclick="switchTab(event, 'tab-services')">
+      <i class="fa-solid fa-screwdriver-wrench"></i> Service Orders ({{ service_requests|length }})
+    </button>
+    <button type="button" class="tab-btn {% if active_tab == 'payments' %}active{% endif %}" onclick="switchTab(event, 'tab-payments')">
+      <i class="fa-solid fa-money-bill-wave"></i> Payments ({{ payments|length }})
+    </button>
+    <button type="button" class="tab-btn {% if active_tab == 'documents' %}active{% endif %}" onclick="switchTab(event, 'tab-documents')">
+      <i class="fa-solid fa-folder-open"></i> Documents ({{ vendor.documents|length if vendor.documents else 0 }})
+    </button>
+    <button type="button" class="tab-btn {% if active_tab == 'performance' %}active{% endif %}" onclick="switchTab(event, 'tab-performance')">
+      <i class="fa-solid fa-chart-line"></i> Performance
+    </button>
+  </div>
+</div>
+
+<!-- TAB 1: CONTRACTS -->
+<div id="tab-contracts" class="tab-content" style="display: {% if active_tab == 'overview' or active_tab == 'contracts' %}block{% else %}none{% endif %};">
+  <div class="content-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="margin: 0; font-size: 1.15rem; color: #1e293b;"><i class="fa-solid fa-file-contract" style="color: #6366f1; margin-right: 8px;"></i>AMC & Service Contracts</h3>
+      <button type="button" class="btn btn-primary btn-sm" onclick="openModal('newContractModal')">
+        <i class="fa-solid fa-plus"></i> Add New Contract
+      </button>
+    </div>
+
+    {% if contracts %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>Contract ID</th>
+              <th>Category</th>
+              <th>Period</th>
+              <th>Amount</th>
+              <th>Payment Frequency</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in contracts %}
+              <tr>
+                <td><strong>{{ c.contract_id }}</strong></td>
+                <td>{{ c.service_category }}</td>
+                <td>
+                  <div>{{ c.start_date }} to {{ c.end_date }}</div>
+                </td>
+                <td style="font-weight: 700; color: #1e293b;">₹{{ "{:,.0f}".format(c.amount) }}</td>
+                <td><span style="font-size: 0.8rem; font-weight: 600; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">{{ c.payment_frequency }}</span></td>
+                <td>
+                  <span class="badge-status badge-{{ c.status.lower() }}">
+                    {{ c.status }}
+                  </span>
+                </td>
+                <td>
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    {% if c.file_id or (c.document and c.document.file_id) %}
+                      <a href="{{ url_for('vendor.view_contract_pdf', contract_id=c.contract_id) }}" target="_blank" class="btn btn-primary btn-sm" title="View PDF Document">
+                        <i class="fa-solid fa-file-pdf"></i> View PDF
+                      </a>
+                    {% endif %}
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="openRenewModal('{{ c.contract_id }}', '{{ c.amount }}', '{{ c.end_date }}')">
+                      <i class="fa-solid fa-arrows-rotate"></i> Renew
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 40px; color: #64748b;">
+        <i class="fa-solid fa-file-circle-xmark" style="font-size: 2.5rem; color: #cbd5e1; margin-bottom: 12px;"></i>
+        <p style="margin: 0; font-size: 1rem;">No contracts recorded for this vendor yet.</p>
+        <button type="button" class="btn btn-primary btn-sm" style="margin-top: 12px;" onclick="openModal('newContractModal')">Create First Contract</button>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- TAB 2: SERVICE REQUESTS -->
+<div id="tab-services" class="tab-content" style="display: {% if active_tab == 'services' %}block{% else %}none{% endif %};">
+  <div class="content-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="margin: 0; font-size: 1.15rem; color: #1e293b;"><i class="fa-solid fa-screwdriver-wrench" style="color: #2563eb; margin-right: 8px;"></i>Service Work Orders & Complaints</h3>
+      <button type="button" class="btn btn-primary btn-sm" onclick="openModal('newServiceModal')">
+        <i class="fa-solid fa-plus"></i> Create Service Order
+      </button>
+    </div>
+
+    {% if service_requests %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>Request ID</th>
+              <th>Category & Description</th>
+              <th>Priority</th>
+              <th>Scheduled</th>
+              <th>Status</th>
+              <th>Rating</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for sr in service_requests %}
+              <tr>
+                <td>
+                  <strong>{{ sr.request_id }}</strong>
+                  {% if sr.complaint_id %}
+                    <div><small style="color: #6366f1;">Ref: {{ sr.complaint_id }}</small></div>
+                  {% endif %}
+                </td>
+                <td>
+                  <div style="font-weight: 600; color: #1e293b;">{{ sr.service_category }}</div>
+                  <div style="color: #64748b; font-size: 0.85rem;">{{ sr.description }}</div>
+                  {% if sr.service_report %}
+                    <div style="margin-top: 4px; font-size: 0.8rem; background: #f8fafc; padding: 4px 8px; border-radius: 4px; border-left: 2px solid #10b981;">
+                      <strong>Report:</strong> {{ sr.service_report }}
+                    </div>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="badge-priority badge-{{ sr.priority.lower() }}">
+                    {{ sr.priority }}
+                  </span>
+                </td>
+                <td>{{ sr.scheduled_date or 'Immediate' }}</td>
+                <td>
+                  <span class="badge-status badge-{{ sr.status.lower() }}">
+                    {{ sr.status }}
+                  </span>
+                </td>
+                <td>
+                  {% if sr.rating and sr.rating.quality %}
+                    <span style="color: #d97706; font-weight: 700;"><i class="fa-solid fa-star"></i> {{ sr.rating.quality }}/5</span>
+                  {% else %}
+                    <span style="color: #94a3b8; font-size: 0.8rem;">Unrated</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div style="display: flex; gap: 6px;">
+                    {% if sr.status not in ['COMPLETED', 'CANCELLED'] %}
+                      <button type="button" class="btn btn-success btn-sm" onclick="openCompleteModal('{{ sr.request_id }}')">
+                        <i class="fa-solid fa-check"></i> Complete
+                      </button>
+                    {% elif sr.status == 'COMPLETED' and not sr.rating %}
+                      <button type="button" class="btn btn-warning btn-sm" onclick="openRateModal('{{ sr.request_id }}')">
+                        <i class="fa-solid fa-star"></i> Rate
+                      </button>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 40px; color: #64748b;">
+        <i class="fa-solid fa-screwdriver-wrench" style="font-size: 2.5rem; color: #cbd5e1; margin-bottom: 12px;"></i>
+        <p style="margin: 0; font-size: 1rem;">No service requests or work orders logged for this vendor.</p>
+        <button type="button" class="btn btn-primary btn-sm" style="margin-top: 12px;" onclick="openModal('newServiceModal')">Log Service Request</button>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- TAB 3: PAYMENTS -->
+<div id="tab-payments" class="tab-content" style="display: {% if active_tab == 'payments' %}block{% else %}none{% endif %};">
+  <div class="content-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="margin: 0; font-size: 1.15rem; color: #1e293b;"><i class="fa-solid fa-money-bill-transfer" style="color: #059669; margin-right: 8px;"></i>Vendor Payment Records</h3>
+      <button type="button" class="btn btn-primary btn-sm" onclick="openModal('newPaymentModal')">
+        <i class="fa-solid fa-plus"></i> Record New Payment
+      </button>
+    </div>
+
+    {% if payments %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>Payment ID</th>
+              <th>Description / Invoice</th>
+              <th>Amount</th>
+              <th>Due Date</th>
+              <th>Method & Ref</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in payments %}
+              <tr>
+                <td><strong>{{ p.payment_id }}</strong></td>
+                <td>
+                  <div style="font-weight: 600; color: #1e293b;">{{ p.service_description }}</div>
+                  {% if p.invoice_number %}
+                    <div style="color: #64748b; font-size: 0.8rem;">Inv: {{ p.invoice_number }}</div>
+                  {% endif %}
+                </td>
+                <td style="font-weight: 700; color: #059669;">₹{{ "{:,.0f}".format(p.amount) }}</td>
+                <td>{{ p.due_date or 'N/A' }}</td>
+                <td>
+                  <div>{{ p.payment_method or 'Direct Transfer' }}</div>
+                  {% if p.transaction_id %}
+                    <small style="color: #64748b; font-family: monospace;">{{ p.transaction_id }}</small>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="badge-status badge-{{ p.status.lower() }}">
+                    {{ p.status }}
+                  </span>
+                </td>
+                <td>
+                  {% if p.status == 'PENDING' or p.status == 'OVERDUE' %}
+                    <button type="button" class="btn btn-emerald btn-sm" style="background-color: #059669; color: white;" onclick="openSettleModal('{{ p.payment_id }}', '{{ p.invoice_number or '' }}', '{{ p.amount }}', '{{ p.service_description or '' }}')">
+                      <i class="fa-solid fa-hand-holding-dollar"></i> Settle Payment
+                    </button>
+                  {% else %}
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="viewPaymentDetail('{{ p.payment_id }}', '{{ p.invoice_number or '' }}', '{{ p.amount }}', '{{ p.payment_method or '' }}', '{{ p.transaction_id or '' }}', '{{ p.payment_date or '' }}', '{{ p.remarks or '' }}')">
+                      <i class="fa-solid fa-circle-info"></i> View Payment
+                    </button>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 40px; color: #64748b;">
+        <i class="fa-solid fa-receipt" style="font-size: 2.5rem; color: #cbd5e1; margin-bottom: 12px;"></i>
+        <p style="margin: 0; font-size: 1rem;">No payment transactions recorded for this vendor.</p>
+        <button type="button" class="btn btn-primary btn-sm" style="margin-top: 12px;" onclick="openModal('newPaymentModal')">Record First Payment</button>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- TAB 4: DOCUMENTS -->
+<div id="tab-documents" class="tab-content" style="display: {% if active_tab == 'documents' %}block{% else %}none{% endif %};">
+  <div class="content-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="margin: 0; font-size: 1.15rem; color: #1e293b;"><i class="fa-solid fa-folder-open" style="color: #f59e0b; margin-right: 8px;"></i>Agreements, GST & Compliance Files</h3>
+      <button type="button" class="btn btn-primary btn-sm" onclick="openModal('uploadDocModal')">
+        <i class="fa-solid fa-cloud-arrow-up"></i> Upload Document
+      </button>
+    </div>
+
+    {% if vendor.documents %}
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+        {% for doc in vendor.documents %}
+          <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; background: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px;">
+                <i class="fa-solid fa-file-pdf" style="color: #ef4444; margin-right: 6px;"></i>
+                {{ doc.title or 'Agreement Document' }}
+              </div>
+              <div style="font-size: 0.78rem; color: #64748b;">
+                {{ doc.doc_type or 'General Attachment' }}
+              </div>
+            </div>
+            {% if doc.file_id %}
+              <a href="{{ url_for('vendor.download_vendor_document', file_id=doc.file_id) }}" target="_blank" class="btn btn-secondary btn-sm">
+                <i class="fa-solid fa-download"></i> View
+              </a>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 40px; color: #64748b;">
+        <i class="fa-solid fa-folder-open" style="font-size: 2.5rem; color: #cbd5e1; margin-bottom: 12px;"></i>
+        <p style="margin: 0; font-size: 1rem;">No compliance documents uploaded yet.</p>
+        <button type="button" class="btn btn-primary btn-sm" style="margin-top: 12px;" onclick="openModal('uploadDocModal')">Upload Contract Document</button>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- TAB 5: PERFORMANCE -->
+<div id="tab-performance" class="tab-content" style="display: {% if active_tab == 'performance' %}block{% else %}none{% endif %};">
+  <div class="content-card">
+    <h3 style="margin: 0 0 16px 0; font-size: 1.15rem; color: #1e293b;"><i class="fa-solid fa-chart-pie" style="color: #3b82f6; margin-right: 8px;"></i>Vendor Performance Overview</h3>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+      <div style="background: #f8fafc; padding: 16px; border-radius: 8px; text-align: center;">
+        <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 4px;">Average Quality Rating</div>
+        <div style="font-size: 1.75rem; font-weight: 700; color: #d97706;">
+          <i class="fa-solid fa-star"></i> {{ vendor.performance.average_rating if vendor.performance else '5.0' }}
+        </div>
+      </div>
+      <div style="background: #f8fafc; padding: 16px; border-radius: 8px; text-align: center;">
+        <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 4px;">Tasks Completed</div>
+        <div style="font-size: 1.75rem; font-weight: 700; color: #10b981;">
+          {{ vendor.performance.services_completed if vendor.performance else 0 }}
+        </div>
+      </div>
+      <div style="background: #f8fafc; padding: 16px; border-radius: 8px; text-align: center;">
+        <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 4px;">SLA Breaches</div>
+        <div style="font-size: 1.75rem; font-weight: 700; color: #ef4444;">
+          {{ vendor.performance.sla_breaches if vendor.performance else 0 }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Modal 1: Edit Vendor Profile -->
+<div class="modal-backdrop" id="editVendorModal">
+  <div class="modal-box" style="max-width: 650px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-pen-to-square" style="color: #2563eb;"></i> Edit Vendor Information</h3>
+      <button class="modal-close-btn" onclick="closeModal('editVendorModal')">&times;</button>
+    </div>
+    <form action="{{ url_for('vendor.manager_update_vendor', vendor_id=vendor.vendor_id) }}" method="POST">
+      <div class="modal-body">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Company / Firm Name *</label>
+            <input type="text" name="name" class="form-control" value="{{ vendor.company.name }}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Contact Person *</label>
+            <input type="text" name="contact_person" class="form-control" value="{{ vendor.company.contact_person }}" required>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Phone Number *</label>
+            <input type="text" name="phone" class="form-control" value="{{ vendor.company.phone }}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" name="email" class="form-control" value="{{ vendor.company.email or '' }}">
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Service Category *</label>
+            <select name="category" class="form-select" required>
+              {% for cat in categories %}
+                <option value="{{ cat }}" {% if vendor.service.category == cat %}selected{% endif %}>{{ cat }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">GST / Registration Number</label>
+            <input type="text" name="gst_number" class="form-control" value="{{ vendor.gst_number or '' }}">
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">City</label>
+            <input type="text" name="city" class="form-control" value="{{ vendor.company.city or '' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">State</label>
+            <input type="text" name="state" class="form-control" value="{{ vendor.company.state or '' }}">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Office Address</label>
+          <input type="text" name="address" class="form-control" value="{{ vendor.company.address or '' }}">
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Emergency Contact</label>
+            <input type="text" name="emergency_contact" class="form-control" value="{{ vendor.emergency_contact or '' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Service Availability</label>
+            <input type="text" name="service_availability" class="form-control" value="{{ vendor.service.availability or '' }}">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Scope / Service Description</label>
+          <textarea name="description" class="form-control" rows="2">{{ vendor.service.description or '' }}</textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editVendorModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Vendor Profile</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal 2: Change Vendor Status -->
+<div class="modal-backdrop" id="statusChangeModal">
+  <div class="modal-box" style="max-width: 480px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-sliders" style="color: #f59e0b;"></i> Change Vendor Status</h3>
+      <button class="modal-close-btn" onclick="closeModal('statusChangeModal')">&times;</button>
+    </div>
+    <form action="{{ url_for('vendor.manager_change_vendor_status', vendor_id=vendor.vendor_id) }}" method="POST">
+      <div class="modal-body">
+        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 16px;">
+          Update operational status for <strong>{{ vendor.company.name }}</strong>. All historical records and contracts are preserved.
+        </p>
+        <div class="form-group">
+          <label class="form-label">Operational Status *</label>
+          <select name="status" class="form-select" required>
+            <option value="ACTIVE" {% if vendor.status == 'ACTIVE' %}selected{% endif %}>ACTIVE - Currently Engaged</option>
+            <option value="INACTIVE" {% if vendor.status == 'INACTIVE' %}selected{% endif %}>INACTIVE - No Active Engagement</option>
+            <option value="SUSPENDED" {% if vendor.status == 'SUSPENDED' %}selected{% endif %}>SUSPENDED - Temporarily On Hold</option>
+            <option value="BLACKLISTED" {% if vendor.status == 'BLACKLISTED' %}selected{% endif %}>BLACKLISTED - Restricted / Defaulter</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Reason / Notes</label>
+          <textarea name="reason" class="form-control" rows="2" placeholder="Provide reason or context for this status change..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('statusChangeModal')">Cancel</button>
+        <button type="submit" class="btn btn-warning">Update Status</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal 3: Add Contract -->
+<div class="modal-backdrop" id="newContractModal">
+  <div class="modal-box" style="max-width: 550px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-file-contract" style="color: #10b981;"></i> Create AMC / Service Contract (PDF Required)</h3>
+      <button class="modal-close-btn" onclick="closeModal('newContractModal')">&times;</button>
+    </div>
+    <form action="{{ url_for('vendor.manager_add_contract', vendor_id=vendor.vendor_id) }}" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="vendor_id" value="{{ vendor.vendor_id }}">
+      <div class="modal-body">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Start Date *</label>
+            <input type="date" name="start_date" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">End Date *</label>
+            <input type="date" name="end_date" class="form-control" required>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Contract Amount (₹) *</label>
+            <input type="number" name="amount" class="form-control" min="0" step="100" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Payment Frequency *</label>
+            <select name="payment_frequency" class="form-select" required>
+              <option value="MONTHLY">Monthly</option>
+              <option value="QUARTERLY">Quarterly</option>
+              <option value="HALF_YEARLY">Half-Yearly</option>
+              <option value="ANNUAL">Annual / One-Time</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Contract PDF Document * (Required, .pdf only)</label>
+          <input type="file" name="contract_pdf" class="form-control" accept=".pdf,application/pdf" required>
+          <small style="color: #64748b; font-size: 0.78rem;">Upload the signed agreement PDF document (saved securely in GridFS).</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Terms & Scope of Work</label>
+          <textarea name="terms" class="form-control" rows="2" placeholder="Includes routine checks, parts replacement terms, response SLA within 4 hours..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('newContractModal')">Cancel</button>
+        <button type="submit" class="btn btn-success">Save Contract & PDF</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal 4: Renew Contract -->
+<div class="modal-backdrop" id="renewContractModal">
+  <div class="modal-box" style="max-width: 500px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-arrows-rotate" style="color: #2563eb;"></i> Renew AMC Contract</h3>
+      <button class="modal-close-btn" onclick="closeModal('renewContractModal')">&times;</button>
+    </div>
+    <form id="renewContractForm" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">New End Date *</label>
+          <input type="date" name="new_end_date" id="renew_end_date" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">New Contract Amount (₹)</label>
+          <input type="number" name="new_amount" id="renew_amount" class="form-control" min="0" step="100">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('renewContractModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Renew Contract</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal 5: Create Service Request -->
+<div class="modal-backdrop" id="newServiceModal">
+  <div class="modal-box" style="max-width: 550px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-screwdriver-wrench" style="color: #2563eb;"></i> Create Service Work Order</h3>
+      <button class="modal-close-btn" onclick="closeModal('newServiceModal')">&times;</button>
+    </div>
+    <form action="{{ url_for('vendor.manager_create_service_request') }}" method="POST">
+      <input type="hidden" name="vendor_id" value="{{ vendor.vendor_id }}">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Service Category</label>
+          <input type="text" class="form-control" value="{{ vendor.service.category }}" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Work Description *</label>
+          <textarea name="description" class="form-control" rows="3" placeholder="Describe maintenance or repair task required..." required></textarea>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Priority *</label>
+            <select name="priority" class="form-select" required>
+              <option value="LOW">Low</option>
+              <option value="MEDIUM" selected>Medium</option>
+              <option value="HIGH">High</option>
+              <option value="CRITICAL">Critical</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Scheduled Date</label>
+            <input type="date" name="scheduled_date" class="form-control">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('newServiceModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Work Order</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal 6: Complete Service Request -->
+<div class="modal-backdrop" id="completeServiceModal">
+  <div class="modal-box" style="max-width: 520px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Complete Service Work Order</h3>
+      <button class="modal-close-btn" onclick="closeModal('completeServiceModal')">&times;</button>
+    </div>
+    <form id="completeServiceForm" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Completion Report / Remarks *</label>
+          <textarea name="service_report" class="form-control" rows="3" placeholder="Describe work completed, parts replaced, technician sign-off..." required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('completeServiceModal')">Cancel</button>
+        <button type="submit" class="btn btn-success">Mark Completed</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal 7: Rate Service Request -->
+<div class="modal-backdrop" id="rateServiceModal">
+  <div class="modal-box" style="max-width: 500px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-star" style="color: #f59e0b;"></i> Rate Vendor Performance</h3>
+      <button class="modal-close-btn" onclick="closeModal('rateServiceModal')">&times;</button>
+    </div>
+    <form id="rateServiceForm" method="POST">
+      <div class="modal-body">
+        <div class="form-grid-3" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label class="form-label">Quality (1-5)</label>
+            <input type="number" name="rating_quality" class="form-control" min="1" max="5" value="5">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Response (1-5)</label>
+            <input type="number" name="rating_response" class="form-control" min="1" max="5" value="5">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Professional (1-5)</label>
+            <input type="number" name="rating_professionalism" class="form-control" min="1" max="5" value="5">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Remarks / Feedback</label>
+          <textarea name="remarks" class="form-control" rows="2" placeholder="Quality of work, promptness, safety standards..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('rateServiceModal')">Cancel</button>
+        <button type="submit" class="btn btn-warning">Submit Rating</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal 8: Record Payment -->
+<div class="modal-backdrop" id="newPaymentModal">
+  <div class="modal-box" style="max-width: 550px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-credit-card" style="color: #059669;"></i> Record Vendor Payment</h3>
+      <button class="modal-close-btn" onclick="closeModal('newPaymentModal')">&times;</button>
+    </div>
+    <form action="{{ url_for('vendor.manager_record_payment') }}" method="POST">
+      <input type="hidden" name="vendor_id" value="{{ vendor.vendor_id }}">
+      <div class="modal-body">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Invoice Number</label>
+            <input type="text" name="invoice_number" class="form-control" placeholder="INV-2026-001">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Amount (₹) *</label>
+            <input type="number" name="amount" class="form-control" min="1" step="100" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Service / Payment Description *</label>
+          <input type="text" name="service_description" class="form-control" value="Monthly AMC Maintenance" required>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Due Date</label>
+            <input type="date" name="due_date" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Payment Status *</label>
+            <select name="status" class="form-select" required>
+              <option value="PAID" selected>PAID</option>
+              <option value="PENDING">PENDING</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Payment Method</label>
+            <select name="payment_method" class="form-select">
+              <option value="BANK_TRANSFER">Bank Transfer / NEFT</option>
+              <option value="UPI">UPI</option>
+              <option value="CHEQUE">Cheque</option>
+              <option value="CASH">Cash</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Transaction / Cheque ID</label>
+            <input type="text" name="transaction_id" class="form-control" placeholder="UTR / Txn Ref">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('newPaymentModal')">Cancel</button>
+        <button type="submit" class="btn btn-emerald" style="background: #059669; color: white;">Save Payment</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal 9: Upload Document -->
+<div class="modal-backdrop" id="uploadDocModal">
+  <div class="modal-box" style="max-width: 500px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-cloud-arrow-up" style="color: #2563eb;"></i> Upload Vendor Document</h3>
+      <button class="modal-close-btn" onclick="closeModal('uploadDocModal')">&times;</button>
+    </div>
+    <form action="{{ url_for('vendor.manager_upload_doc', vendor_id=vendor.vendor_id) }}" method="POST" enctype="multipart/form-data">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Document Title / Scope *</label>
+          <input type="text" name="title" class="form-control" placeholder="e.g. 2026 AMC Agreement" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Document Type *</label>
+          <select name="doc_type" class="form-select" required>
+            <option value="Service Agreement">Service Agreement / AMC</option>
+            <option value="GST Certificate">GST Certificate</option>
+            <option value="License">Trade / Safety License</option>
+            <option value="Insurance">Liability Insurance</option>
+            <option value="Quotation">Quotation / Proposal</option>
+            <option value="Invoice">Invoice</option>
+            <option value="Service Report">Service Report</option>
+            <option value="Warranty">Warranty Certificate</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Select File (PDF, DOC, Images) *</label>
+          <input type="file" name="document_file" class="form-control" required accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('uploadDocModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Upload Document</button>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- Modal 10: Settle Vendor Payment -->
+<div class="modal-backdrop" id="settlePaymentModal">
+  <div class="modal-box" style="max-width: 520px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-hand-holding-dollar" style="color: #059669;"></i> Settle Vendor Invoice</h3>
+      <button class="modal-close-btn" onclick="closeModal('settlePaymentModal')">&times;</button>
+    </div>
+    <form id="settlePaymentForm" method="POST">
+      <input type="hidden" name="vendor_id" value="{{ vendor.vendor_id }}">
+      <div class="modal-body">
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+          <div style="font-size: 0.8rem; color: #166534; font-weight: 600;">INVOICE TO SETTLE</div>
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px;">
+            <strong id="settleInvoiceNo" style="color: #1e293b; font-size: 1rem;">INV-000</strong>
+            <span id="settleAmountDisplay" style="font-size: 1.25rem; font-weight: 800; color: #059669;">₹0</span>
+          </div>
+          <div id="settleDesc" style="font-size: 0.85rem; color: #475569; margin-top: 4px;">Description</div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Payment Method *</label>
+            <select name="payment_method" class="form-select" required>
+              <option value="BANK_TRANSFER" selected>Bank Transfer (NEFT/RTGS)</option>
+              <option value="UPI">UPI</option>
+              <option value="CHEQUE">Cheque</option>
+              <option value="CASH">Cash</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Payment Date *</label>
+            <input type="date" name="payment_date" id="settlePaymentDate" class="form-control" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Transaction Reference / UTR Number *</label>
+          <input type="text" name="transaction_id" class="form-control" placeholder="e.g. UTR12345678 or Cheque #987654" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Manager Remarks</label>
+          <textarea name="remarks" class="form-control" rows="2" placeholder="e.g. Approved and settled via society bank account..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('settlePaymentModal')">Cancel</button>
+        <button type="submit" class="btn btn-emerald" style="background-color: #059669; color: white;">
+          <i class="fa-solid fa-check"></i> Confirm Payment Settlement
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal 11: View Payment Details -->
+<div class="modal-backdrop" id="viewPaymentModal">
+  <div class="modal-box" style="max-width: 480px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-receipt" style="color: #2563eb;"></i> Payment Details</h3>
+      <button class="modal-close-btn" onclick="closeModal('viewPaymentModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="color: #64748b; font-size: 0.85rem;">Payment ID:</span>
+          <strong id="viewPayId" style="color: #1e293b;">-</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="color: #64748b; font-size: 0.85rem;">Invoice No:</span>
+          <strong id="viewPayInv" style="color: #1e293b;">-</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="color: #64748b; font-size: 0.85rem;">Amount:</span>
+          <strong id="viewPayAmount" style="color: #059669; font-size: 1.1rem;">₹-</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="color: #64748b; font-size: 0.85rem;">Method:</span>
+          <span id="viewPayMethod" style="color: #1e293b; font-weight: 600;">-</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="color: #64748b; font-size: 0.85rem;">Transaction Ref:</span>
+          <span id="viewPayTxn" style="font-family: monospace; color: #475569; font-weight: 600;">-</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="color: #64748b; font-size: 0.85rem;">Settled Date:</span>
+          <span id="viewPayDate" style="color: #1e293b;">-</span>
+        </div>
+        <div style="margin-top: 12px; border-top: 1px solid #e2e8f0; padding-top: 10px;">
+          <span style="color: #64748b; font-size: 0.8rem; display: block; margin-bottom: 4px;">Remarks:</span>
+          <p id="viewPayRemarks" style="margin: 0; color: #334155; font-size: 0.85rem; font-style: italic;">No remarks.</p>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" onclick="closeModal('viewPaymentModal')">Close</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.tab-btn {
+  background: none;
+  border: none;
+  padding: 10px 18px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.tab-btn:hover {
+  color: #1e293b;
+}
+.tab-btn.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+</style>
+
+<script>
+function switchTab(evt, tabId) {
+  document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  
+  const target = document.getElementById(tabId);
+  if (target) {
+    target.style.display = 'block';
+  }
+  if (evt && evt.currentTarget) {
+    evt.currentTarget.classList.add('active');
+  }
+}
+
+function openRenewModal(contractId, amount, endDate) {
+  const form = document.getElementById('renewContractForm');
+  form.action = `/manager/vendors/contracts/${contractId}/renew`;
+  document.getElementById('renew_amount').value = amount;
+  document.getElementById('renew_end_date').value = endDate;
+  openModal('renewContractModal');
+}
+
+function openCompleteModal(requestId) {
+  const form = document.getElementById('completeServiceForm');
+  form.action = `/manager/vendors/service-requests/${requestId}/complete`;
+  openModal('completeServiceModal');
+}
+
+function openRateModal(requestId) {
+  const form = document.getElementById('rateServiceForm');
+  form.action = `/manager/vendors/service-requests/${requestId}/rate`;
+  openModal('rateServiceModal');
+}
+
+function openSettleModal(paymentId, invoiceNo, amount, desc) {
+  const form = document.getElementById('settlePaymentForm');
+  form.action = `/manager/vendors/payments/${paymentId}/settle`;
+  document.getElementById('settleInvoiceNo').textContent = invoiceNo || paymentId;
+  document.getElementById('settleAmountDisplay').textContent = '₹' + Number(amount).toLocaleString('en-IN');
+  document.getElementById('settleDesc').textContent = desc || 'Vendor Service / AMC';
+  
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('settlePaymentDate').value = today;
+  
+  openModal('settlePaymentModal');
+}
+
+function viewPaymentDetail(payId, invNo, amount, method, txn, dateVal, remarks) {
+  document.getElementById('viewPayId').textContent = payId;
+  document.getElementById('viewPayInv').textContent = invNo || 'N/A';
+  document.getElementById('viewPayAmount').textContent = '₹' + Number(amount).toLocaleString('en-IN');
+  document.getElementById('viewPayMethod').textContent = method || 'Direct';
+  document.getElementById('viewPayTxn').textContent = txn || 'N/A';
+  document.getElementById('viewPayDate').textContent = dateVal || 'N/A';
+  document.getElementById('viewPayRemarks').textContent = remarks || 'No remarks provided.';
+  openModal('viewPaymentModal');
+}
+</script>
+{% endblock %}

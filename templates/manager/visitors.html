@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Visitors Log{% endblock %}
+{% block page_title %}Estate Visitor Traffic{% endblock %}
+{% block page_subtitle %}Gate security activity, verified check-ins, and guest entry records{% endblock %}
+
+{% block content %}
+<div class="content-card">
+  <div class="card-header-bar">
+    <h3><i class="fa-solid fa-users"></i> Visitor Access Log</h3>
+  </div>
+
+  <div class="card-body" style="padding: 0;">
+    {% if visitors %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>Visitor ID</th>
+              <th>Name & Contact</th>
+              <th>Destination Flat</th>
+              <th>Host Resident</th>
+              <th>Purpose</th>
+              <th>Vehicle</th>
+              <th>Status</th>
+              <th>Entry Time</th>
+              <th>Exit Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for v in visitors %}
+              <tr>
+                <td><strong>{{ v.visitor_id }}</strong></td>
+                <td>
+                  <strong>{{ v.visitor_name }}</strong>
+                  <span style="font-size: 0.75rem; color: #64748b; display: block;">{{ v.phone }}</span>
+                </td>
+                <td>
+                  <span style="font-weight: 700; color: #1e293b;">Flat {{ v.flat }}</span>
+                  <span style="font-size: 0.72rem; color: #64748b; display: block;">Block {{ v.block }}</span>
+                </td>
+                <td>{{ v.resident_name }}</td>
+                <td>{{ v.purpose }}</td>
+                <td>{{ v.vehicle_number or 'Pedestrian' }}</td>
+                <td>
+                  <span class="badge-status badge-{{ v.status.lower() }}">
+                    {{ v.status }}
+                  </span>
+                </td>
+                <td style="font-size: 0.8rem;">
+                  {% if v.check_in_time %}{{ v.check_in_time | datetime_format('%b %d, %I:%M %p') }}{% else %}<span style="color:#94a3b8;">Pending</span>{% endif %}
+                </td>
+                <td style="font-size: 0.8rem;">
+                  {% if v.check_out_time %}{{ v.check_out_time | datetime_format('%b %d, %I:%M %p') }}{% else %}<span style="color:#94a3b8;">Inside</span>{% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 48px; color: var(--text-muted);">
+        <p>No visitor entries recorded.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

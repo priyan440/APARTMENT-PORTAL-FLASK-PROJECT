@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Apartment Portal</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    body {
+      background: linear-gradient(135deg, #090e1a 0%, #111a33 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .auth-card {
+      background: #ffffff;
+      width: 100%;
+      max-width: 480px;
+      border-radius: var(--radius-lg);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+      overflow: hidden;
+      animation: slideUp 0.35s ease;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .auth-header {
+      background: #0b1329;
+      padding: 32px 32px 28px;
+      color: #ffffff;
+      text-align: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .auth-brand-icon {
+      width: 54px;
+      height: 54px;
+      background: linear-gradient(135deg, #2563eb, #6366f1);
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      margin-bottom: 12px;
+      box-shadow: 0 0 25px rgba(37, 99, 235, 0.4);
+    }
+    .auth-body {
+      padding: 32px;
+    }
+    .demo-accounts {
+      margin-top: 24px;
+      padding: 16px;
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: var(--radius-md);
+    }
+    .demo-pill {
+      display: inline-block;
+      padding: 4px 10px;
+      margin: 3px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: #1e293b;
+      transition: 0.15s;
+    }
+    .demo-pill:hover {
+      background: #eff6ff;
+      border-color: #3b82f6;
+      color: #1d4ed8;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-brand-icon">
+        <i class="fa-solid fa-city"></i>
+      </div>
+      <h2 style="font-family: var(--font-display); font-size: 1.4rem;">APARTMENT PORTAL</h2>
+      <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">Apartment Residential Management Portal</p>
+    </div>
+
+    <div class="auth-body">
+      <!-- Flash alerts -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}" style="margin-bottom: 20px;">
+              <i class="fa-solid fa-circle-exclamation"></i>
+              <div>{{ message }}</div>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" id="loginForm" action="{{ url_for('auth.login', next=request.args.get('next')) }}">
+        <div class="form-group">
+          <label class="form-label">Email or User ID</label>
+          <div style="position: relative;">
+            <input type="text" name="identifier" id="loginIdentifier" class="form-control" placeholder="e.g. resident@greenwood.com or RES001" value="{{ identifier or '' }}" required autofocus>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" name="password" id="loginPassword" class="form-control" placeholder="Enter your secure password" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 0.95rem; margin-top: 8px;">
+          <i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In to Portal
+        </button>
+      </form>
+
+      <div style="text-align: center; margin-top: 20px; font-size: 0.85rem; color: #64748b;">
+        New Resident? <a href="{{ url_for('auth.register') }}" style="color: #2563eb; font-weight: 600; text-decoration: none;">Register Your Flat</a>
+      </div>
+
+      <!-- Quick Demo Accounts Switcher -->
+      <div class="demo-accounts">
+        <div style="font-size: 0.78rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 8px;">
+          <i class="fa-solid fa-key" style="color: #f59e0b;"></i> Click to Auto-fill Demo Accounts:
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+          <button type="button" class="demo-pill" onclick="fillCreds('resident@greenwood.com', 'resident123')">
+            <i class="fa-solid fa-user"></i> Resident (Arun - A-204)
+          </button>
+          <button type="button" class="demo-pill" onclick="fillCreds('priya@greenwood.com', 'resident123')">
+            <i class="fa-solid fa-user"></i> Resident (Priya - B-101)
+          </button>
+          <button type="button" class="demo-pill" onclick="fillCreds('manager@greenwood.com', 'manager123')">
+            <i class="fa-solid fa-user-tie"></i> Manager (Anita)
+          </button>
+          <button type="button" class="demo-pill" onclick="fillCreds('ravi@greenwood.com', 'tech123')">
+            <i class="fa-solid fa-wrench"></i> Technician (Ravi - Plumbing)
+          </button>
+          <button type="button" class="demo-pill" onclick="fillCreds('security@greenwood.com', 'security123')">
+            <i class="fa-solid fa-shield-halved"></i> Security (Bahadur)
+          </button>
+          <button type="button" class="demo-pill" onclick="fillCreds('admin@greenwood.com', 'admin123')">
+            <i class="fa-solid fa-server"></i> Admin (Vikram)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function fillCreds(email, password) {
+      document.getElementById('loginIdentifier').value = email;
+      document.getElementById('loginPassword').value = password;
+      document.getElementById('loginForm').submit();
+    }
+  </script>
+</body>
+</html>

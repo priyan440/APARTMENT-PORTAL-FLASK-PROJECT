@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{% block title %}Society Analytics{% endblock %}
+{% block page_title %}MongoDB Aggregation Analytics{% endblock %}
+{% block page_subtitle %}Live metrics calculated via MongoDB database aggregation pipelines (Section 30 & 44){% endblock %}
+
+{% block content %}
+<!-- Charts Grid 1: Demographics & Billing -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+  <!-- Billing Collection by Block -->
+  <div class="content-card">
+    <div class="card-header-bar">
+      <h3><i class="fa-solid fa-chart-column"></i> Revenue Collection vs Pending by Block</h3>
+    </div>
+    <div class="card-body">
+      <canvas id="billingChart" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- Residents by Block & Ownership -->
+  <div class="content-card">
+    <div class="card-header-bar">
+      <h3><i class="fa-solid fa-users-viewfinder"></i> Resident Distribution & Tenancy</h3>
+    </div>
+    <div class="card-body" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: center;">
+      <div>
+        <h5 style="text-align: center; font-size: 0.8rem; color: #64748b; margin-bottom: 8px;">Residents by Block</h5>
+        <canvas id="residentsBlockChart" height="180"></canvas>
+      </div>
+      <div>
+        <h5 style="text-align: center; font-size: 0.8rem; color: #64748b; margin-bottom: 8px;">Owners vs Tenants</h5>
+        <canvas id="tenancyChart" height="180"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Grid 2: Complaints & Amenities -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+  <!-- Complaints by Category -->
+  <div class="content-card">
+    <div class="card-header-bar">
+      <h3><i class="fa-solid fa-screwdriver-wrench"></i> Complaints by Maintenance Category</h3>
+    </div>
+    <div class="card-body">
+      <canvas id="complaintsCategoryChart" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- Amenity Bookings Popularity -->
+  <div class="content-card">
+    <div class="card-header-bar">
+      <h3><i class="fa-solid fa-swimming-pool"></i> Most Booked Amenities</h3>
+    </div>
+    <div class="card-body">
+      <canvas id="amenitiesChart" height="200"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Grid 3: Community Collections Analytics -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+  <!-- Collections by Category -->
+  <div class="content-card">
+    <div class="card-header-bar">
+      <h3><i class="fa-solid fa-layer-group"></i> Community Drives Revenue by Category</h3>
+    </div>
+    <div class="card-body">
+      <canvas id="communityCategoryChart" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- Community Collections by Block -->
+  <div class="content-card">
+    <div class="card-header-bar">
+      <h3><i class="fa-solid fa-city"></i> Community Collection Realization by Block</h3>
+    </div>
+    <div class="card-body">
+      <canvas id="communityBlockChart" height="200"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Technician Workload & Performance Table -->
+<div class="content-card">
+  <div class="card-header-bar">
+    <h3><i class="fa-solid fa-user-gear"></i> Technician Real-Time Performance & Ratings</h3>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    <div class="table-responsive">
+      <table class="portal-table">
+        <thead>
+          <tr>
+            <th>Technician</th>
+            <th>Specialization</th>
+            <th>Active Workload</th>
+            <th>Completed Work</th>
+            <th>Average Rating</th>
+          </tr>
+        </thead>
+        <tbody id="techStatsBody">
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 20px; color: #64748b;">
+              <i class="fas fa-spinner fa-spin"></i> Loading aggregation statistics...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    fetch("{{ url_for('manager.api_analytics_data') }}")
+      .then(res => res.json())
+      .then(data => {
+        // 1. Billing Collection by Block
+        new Chart(document.getElementById("billingChart"), {
+          type: "bar",
+          data: {
+            labels: data.billing_by_block.labels,
+            datasets: [
+              {
+                label: "Collected (INR)",
+                data: data.billing_by_block.collected,
+                backgroundColor: "#10b981",
+                borderRadius: 4
+              },
+              {
+                label: "Pending (INR)",
+                data: data.billing_by_block.pending,
+                backgroundColor: "#f59e0b",
+                borderRadius: 4
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: { beginAtZero: true }
+            }
+          }
+        });
+
+        // 2. Residents by Block
+        new Chart(document.getElementById("residentsBlockChart"), {
+          type: "bar",
+          data: {
+            labels: data.residents_by_block.labels,
+            datasets: [{
+              label: "Residents",
+              data: data.residents_by_block.data,
+              backgroundColor: "#3b82f6",
+              borderRadius: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+          }
+        });
+
+        // 3. Tenancy Doughnut
+        new Chart(document.getElementById("tenancyChart"), {
+          type: "doughnut",
+          data: {
+            labels: data.owner_vs_tenant.labels,
+            datasets: [{
+              data: data.owner_vs_tenant.data,
+              backgroundColor: ["#2563eb", "#6366f1", "#0891b2"]
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { position: "bottom" } }
+          }
+        });
+
+        // 4. Complaints by Category
+        new Chart(document.getElementById("complaintsCategoryChart"), {
+          type: "bar",
+          data: {
+            labels: data.complaints_by_category.labels,
+            datasets: [{
+              label: "Reported Issues",
+              data: data.complaints_by_category.data,
+              backgroundColor: ["#ef4444", "#f59e0b", "#3b82f6", "#10b981", "#8b5cf6"],
+              borderRadius: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+          }
+        });
+
+        // 5. Amenities Popularity
+        new Chart(document.getElementById("amenitiesChart"), {
+          type: "bar",
+          data: {
+            labels: data.bookings_by_amenity.labels,
+            datasets: [{
+              label: "Reservations Count",
+              data: data.bookings_by_amenity.data,
+              backgroundColor: "#6366f1",
+              borderRadius: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            indexAxis: "y",
+            scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
+          }
+        });
+
+        // 6. Community Collections by Category
+        if (data.community_by_category && document.getElementById("communityCategoryChart")) {
+          new Chart(document.getElementById("communityCategoryChart"), {
+            type: "bar",
+            data: {
+              labels: data.community_by_category.labels,
+              datasets: [
+                {
+                  label: "Collected (INR)",
+                  data: data.community_by_category.collected,
+                  backgroundColor: "#2563eb",
+                  borderRadius: 4
+                },
+                {
+                  label: "Pending (INR)",
+                  data: data.community_by_category.pending,
+                  backgroundColor: "#f59e0b",
+                  borderRadius: 4
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              scales: { y: { beginAtZero: true } }
+            }
+          });
+        }
+
+        // 7. Community Collections by Block
+        if (data.community_by_block && document.getElementById("communityBlockChart")) {
+          new Chart(document.getElementById("communityBlockChart"), {
+            type: "bar",
+            data: {
+              labels: data.community_by_block.labels,
+              datasets: [
+                {
+                  label: "Collected (INR)",
+                  data: data.community_by_block.collected,
+                  backgroundColor: "#10b981",
+                  borderRadius: 4
+                },
+                {
+                  label: "Pending (INR)",
+                  data: data.community_by_block.pending,
+                  backgroundColor: "#ef4444",
+                  borderRadius: 4
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              scales: { y: { beginAtZero: true } }
+            }
+          });
+        }
+
+        // 8. Populate Technicians Table
+        const tbody = document.getElementById("techStatsBody");
+        tbody.innerHTML = "";
+        data.technicians.forEach(t => {
+          const row = `
+            <tr>
+              <td><strong>${t.name}</strong></td>
+              <td><span style="background:#eff6ff; color:#2563eb; padding:2px 8px; border-radius:4px; font-size:0.78rem; font-weight:700;">${t.specialization}</span></td>
+              <td><strong style="color:${t.active_tasks > 3 ? '#dc2626' : '#166534'}">${t.active_tasks} Active</strong></td>
+              <td><strong>${t.completed_tasks} Completed</strong></td>
+              <td><span style="color:#d97706; font-weight:700;"><i class="fa-solid fa-star"></i> ${t.rating} / 5.0</span></td>
+            </tr>
+          `;
+          tbody.innerHTML += row;
+        });
+      });
+  });
+</script>
+{% endblock %}

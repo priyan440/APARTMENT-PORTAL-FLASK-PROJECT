@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Security Console{% endblock %}
+{% block page_title %}Main Gate Security Console{% endblock %}
+{% block page_subtitle %}Guard post operations, visitor arrivals, parcel logs, and emergency alarms (Section 27){% endblock %}
+
+{% block content %}
+<!-- Active SOS alerts banner if any -->
+{% if active_sos %}
+  <div style="background: #fef2f2; border: 2px solid #ef4444; border-radius: var(--radius-md); padding: 18px 24px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between;">
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <i class="fa-solid fa-triangle-exclamation" style="font-size: 2.2rem; color: #dc2626;"></i>
+      <div>
+        <h3 style="color: #991b1b; font-weight: 800; font-size: 1.15rem;">ALERT: {{ active_sos[0].alert_type.upper() }} EMERGENCY AT FLAT {{ active_sos[0].flat }}!</h3>
+        <p style="color: #b91c1c; font-size: 0.88rem;">
+          Resident: <strong>{{ active_sos[0].resident_name }}</strong> (Ph: {{ active_sos[0].resident_phone }}) • Dispatched {{ active_sos[0].created_at | datetime_format('%I:%M %p') }}
+        </p>
+      </div>
+    </div>
+    <a href="{{ url_for('security.emergency') }}" class="btn btn-danger">
+      Respond Immediately <i class="fa-solid fa-arrow-right"></i>
+    </a>
+  </div>
+{% endif %}
+
+<!-- Quick Gate Action Cards -->
+<div class="metrics-grid">
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Expected Guests Today</h4>
+      <div class="metric-value">{{ expected_today | length }}</div>
+      <div class="metric-sub">Pre-authorized by residents</div>
+    </div>
+    <div class="metric-icon-box box-blue">
+      <i class="fa-solid fa-address-book"></i>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Currently Inside</h4>
+      <div class="metric-value" style="color: #166534;">{{ currently_inside | length }}</div>
+      <div class="metric-sub">Visitors checked in</div>
+    </div>
+    <div class="metric-icon-box box-emerald">
+      <i class="fa-solid fa-person-shelter"></i>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Parcels at Gate</h4>
+      <div class="metric-value" style="color: #2563eb;">{{ recent_deliveries | length }}</div>
+      <div class="metric-sub">Awaiting resident pickup</div>
+    </div>
+    <div class="metric-icon-box box-cyan">
+      <i class="fa-solid fa-boxes-packing"></i>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Active SOS Alerts</h4>
+      <div class="metric-value" style="color: {% if active_sos %}#dc2626{% else %}#166534{% endif %};">
+        {{ active_sos | length }}
+      </div>
+      <div class="metric-sub">Estate alarms</div>
+    </div>
+    <div class="metric-icon-box box-rose">
+      <i class="fa-solid fa-tower-broadcast"></i>
+    </div>
+  </div>
+</div>
+
+<!-- Two Columns: Expected Guests Today & Currently Inside -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+  <!-- Expected Guests -->
+  <div class="content-card">
+    <div class="card-header-bar">
+      <h3>
+        <i class="fa-solid fa-clock" style="color: #2563eb;"></i>
+        Expected Guests Today ({{ expected_today | length }})
+      </h3>
+      <a href="{{ url_for('security.visitors') }}" class="btn btn-secondary btn-sm">All Visitors</a>
+    </div>
+    <div class="card-body" style="padding: 0;">
+      {% if expected_today %}
+        <div style="display: flex; flex-direction: column;">
+          {% for v in expected_today %}
+            <div style="padding: 16px 20px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <strong style="color: #0f172a; font-size: 0.95rem;">{{ v.visitor_name }}</strong>
+                <span style="font-size: 0.78rem; color: #64748b; display: block;">Ph: {{ v.phone }}</span>
+                <span style="font-size: 0.8rem; color: #2563eb; font-weight: 600;">
+                  Visiting Flat {{ v.flat }} ({{ v.resident_name }}) • At {{ v.expected_time }}
+                </span>
+              </div>
+              <form method="POST" action="{{ url_for('security.visitors') }}">
+                <input type="hidden" name="action" value="check_in">
+                <input type="hidden" name="visitor_id" value="{{ v.visitor_id }}">
+                <button type="submit" class="btn btn-success btn-sm">
+                  <i class="fa-solid fa-right-to-bracket"></i> Check In
+                </button>
+              </form>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+          <p style="font-size: 0.85rem;">No more pre-authorized visitors expected today.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Currently Inside -->
+  <div class="content-card">
+    <div class="card-header-bar">
+      <h3>
+        <i class="fa-solid fa-user-check" style="color: #10b981;"></i>
+        Visitors Currently on Premises ({{ currently_inside | length }})
+      </h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+      {% if currently_inside %}
+        <div style="display: flex; flex-direction: column;">
+          {% for v in currently_inside %}
+            <div style="padding: 16px 20px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <strong style="color: #0f172a; font-size: 0.95rem;">{{ v.visitor_name }}</strong>
+                <span style="font-size: 0.8rem; color: #475569; display: block;">
+                  At Flat {{ v.flat }} (Vehicle: {{ v.vehicle_number or 'None' }})
+                </span>
+                <span style="font-size: 0.75rem; color: #94a3b8;">
+                  In: {{ v.check_in_time | datetime_format('%I:%M %p') }}
+                </span>
+              </div>
+              <form method="POST" action="{{ url_for('security.visitors') }}">
+                <input type="hidden" name="action" value="check_out">
+                <input type="hidden" name="visitor_id" value="{{ v.visitor_id }}">
+                <button type="submit" class="btn btn-secondary btn-sm">
+                  <i class="fa-solid fa-arrow-right-from-bracket"></i> Check Out
+                </button>
+              </form>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+          <p style="font-size: 0.85rem;">No active visitors inside the compound.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

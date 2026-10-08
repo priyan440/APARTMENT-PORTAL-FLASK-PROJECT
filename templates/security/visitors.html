@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Visitor Management{% endblock %}
+{% block page_title %}Gate Visitors Management{% endblock %}
+{% block page_subtitle %}Pre-authorized passes, walk-in registration, and vehicle logging (Section 27){% endblock %}
+
+{% block content %}
+<div class="content-card">
+  <div class="card-header-bar">
+    <h3><i class="fa-solid fa-address-book"></i> Visitors Registry</h3>
+    <button type="button" class="btn btn-primary btn-sm" onclick="openModal('walkInModal')">
+      <i class="fa-solid fa-user-plus"></i> Register Walk-in Entry
+    </button>
+  </div>
+
+  <!-- Search and status filter -->
+  <form method="GET" action="{{ url_for('security.visitors') }}" class="filter-bar">
+    <div style="flex: 1; max-width: 320px;">
+      <input type="text" name="search" class="form-control" placeholder="Search by name, phone, flat..." value="{{ search_query }}" style="padding: 6px 12px; font-size: 0.85rem;">
+    </div>
+    <select name="status" class="form-select" style="width: auto; padding: 6px 10px; font-size: 0.82rem;" onchange="this.form.submit()">
+      <option value="">All Statuses</option>
+      <option value="EXPECTED" {% if active_status == 'EXPECTED' %}selected{% endif %}>Expected</option>
+      <option value="CHECKED_IN" {% if active_status == 'CHECKED_IN' %}selected{% endif %}>Checked In</option>
+      <option value="CHECKED_OUT" {% if active_status == 'CHECKED_OUT' %}selected{% endif %}>Checked Out</option>
+    </select>
+    <button type="submit" class="btn btn-secondary btn-sm">Search</button>
+    <a href="{{ url_for('security.visitors') }}" class="btn btn-secondary btn-sm">Reset</a>
+  </form>
+
+  <div class="card-body" style="padding: 0;">
+    {% if visitors %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Visitor Name</th>
+              <th>Destination Flat</th>
+              <th>Host Resident</th>
+              <th>Purpose</th>
+              <th>Vehicle Number</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for v in visitors %}
+              <tr>
+                <td><strong>{{ v.visitor_id }}</strong></td>
+                <td>
+                  <strong>{{ v.visitor_name }}</strong>
+                  <span style="font-size: 0.72rem; color: #64748b; display: block;">{{ v.phone }}</span>
+                </td>
+                <td>
+                  <span style="font-weight: 700; color: #1e293b;">Flat {{ v.flat }}</span>
+                  <span style="font-size: 0.72rem; color: #64748b; display: block;">Block {{ v.block }}</span>
+                </td>
+                <td>{{ v.resident_name }}</td>
+                <td>{{ v.purpose }}</td>
+                <td>{{ v.vehicle_number or 'Pedestrian' }}</td>
+                <td>
+                  <span class="badge-status badge-{{ v.status.lower() }}">
+                    {{ v.status }}
+                  </span>
+                </td>
+                <td>
+                  {% if v.status == 'EXPECTED' %}
+                    <form method="POST" action="{{ url_for('security.visitors') }}" style="display:inline;">
+                      <input type="hidden" name="action" value="check_in">
+                      <input type="hidden" name="visitor_id" value="{{ v.visitor_id }}">
+                      <button type="submit" class="btn btn-success btn-sm">Check In</button>
+                    </form>
+                  {% elif v.status == 'CHECKED_IN' %}
+                    <form method="POST" action="{{ url_for('security.visitors') }}" style="display:inline;">
+                      <input type="hidden" name="action" value="check_out">
+                      <input type="hidden" name="visitor_id" value="{{ v.visitor_id }}">
+                      <button type="submit" class="btn btn-secondary btn-sm">Check Out</button>
+                    </form>
+                  {% else %}
+                    <span style="color: #94a3b8; font-size: 0.8rem;">Departed</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 48px; color: var(--text-muted);">
+        <p>No visitors found.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Walk-in Visitor Modal -->
+<div class="modal-backdrop" id="walkInModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-user-plus" style="color: #2563eb;"></i> Direct Walk-In Entry</h3>
+      <button class="modal-close-btn" onclick="closeModal('walkInModal')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('security.visitors') }}">
+      <div class="modal-body">
+        <input type="hidden" name="action" value="walk_in">
+
+        <div class="form-group">
+          <label class="form-label">Destination Flat</label>
+          <select name="flat" class="form-select" required>
+            <option value="">-- Choose Flat --</option>
+            {% for f in occupied_flats %}
+              <option value="{{ f.flat_number }}">Flat {{ f.flat_number }} ({{ f.resident_name }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Visitor Full Name</label>
+          <input type="text" name="visitor_name" class="form-control" placeholder="e.g. Ramesh Patel" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Visitor Phone Number</label>
+          <input type="tel" name="phone" class="form-control" placeholder="+91 98000 00000" required>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Purpose of Visit</label>
+            <input type="text" name="purpose" class="form-control" placeholder="Delivery, Guest, Repair..." required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Vehicle Registration (Optional)</label>
+            <input type="text" name="vehicle_number" class="form-control" placeholder="TN58ZZ0000">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('walkInModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Log & Check In</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

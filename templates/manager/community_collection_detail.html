@@ -1,0 +1,445 @@
+{% extends "base.html" %}
+
+{% block title %}{{ collection.title }} - Collection Details{% endblock %}
+{% block page_title %}{{ collection.title }}{% endblock %}
+{% block page_subtitle %}Community Collection ID: {{ collection.collection_id }} • Created by {{ collection.created_by_name }}{% endblock %}
+
+{% block content %}
+<!-- Top Action / Navigation Bar -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+  <a href="{{ url_for('community.manager_collections_list') }}" class="btn btn-secondary btn-sm">
+    <i class="fa-solid fa-arrow-left"></i> Back to All Collections
+  </a>
+  <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+    <!-- Send Reminders -->
+    <form method="POST" action="{{ url_for('community.manager_remind_collection', collection_id=collection.collection_id) }}" style="margin: 0;" onsubmit="return confirm('Send automated payment reminder notifications to all residents with pending/overdue dues for this collection?')">
+      <button type="submit" class="btn btn-warning btn-sm" style="font-weight: 600;">
+        <i class="fa-solid fa-bell"></i> Send Payment Reminders ({{ stats.pending_count + stats.overdue_count }})
+      </button>
+    </form>
+    
+    <!-- Edit Modal Button -->
+    <button type="button" class="btn btn-secondary btn-sm" onclick="openModal('editCollectionModal')">
+      <i class="fa-solid fa-pen-to-square"></i> Edit Details
+    </button>
+
+    {% if collection.status != 'CANCELLED' %}
+      <button type="button" class="btn btn-danger btn-sm" onclick="openModal('cancelCollectionModal')">
+        <i class="fa-solid fa-ban"></i> Cancel Collection
+      </button>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Collection Overview Card -->
+<div class="content-card" style="margin-bottom: 24px; border-left: 5px solid {% if collection.status == 'ACTIVE' %}#2563eb{% elif collection.status == 'COMPLETED' %}#10b981{% elif collection.status == 'CANCELLED' %}#ef4444{% else %}#f59e0b{% endif %};">
+  <div class="card-body" style="padding: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
+      <div>
+        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+          <span class="badge-status" style="background: #e0e7ff; color: #3730a3; font-weight: 700;">
+            <i class="fa-solid fa-tag"></i> {{ collection.type }}
+          </span>
+          <span class="badge-status" style="background: {% if collection.payment_type == 'MANDATORY' %}#fee2e2; color: #991b1b;{% else %}#dcfce7; color: #166534;{% endif %} font-weight: 700;">
+            {{ collection.payment_type }}
+          </span>
+          <span class="badge-status badge-{{ collection.status.lower() }}">
+            {{ collection.status }}
+          </span>
+        </div>
+        <h2 style="font-size: 1.4rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">{{ collection.title }}</h2>
+        <p style="font-size: 0.9rem; color: #64748b; max-width: 800px; margin: 0;">{{ collection.description or 'No extra description.' }}</p>
+      </div>
+
+      <div style="text-align: right; background: #f8fafc; border: 1px solid var(--border-light); padding: 12px 20px; border-radius: 8px;">
+        <span style="font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 700; display: block;">Base Contribution</span>
+        <span style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">₹{{ "{:,.2f}".format(collection.amount) }}</span>
+        {% if collection.has_tier_pricing %}
+          <div style="font-size: 0.75rem; color: #2563eb; margin-top: 4px;">
+            Adult: ₹{{ "{:,.0f}".format(collection.pricing_tiers.get('ADULT', 0)) }} | Child: ₹{{ "{:,.0f}".format(collection.pricing_tiers.get('CHILD', 0)) }} | Senior: ₹{{ "{:,.0f}".format(collection.pricing_tiers.get('SENIOR', 0)) }}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Quick Meta Chips -->
+    <div style="display: flex; gap: 24px; flex-wrap: wrap; border-top: 1px solid var(--border-light); padding-top: 16px; font-size: 0.85rem;">
+      <div>
+        <span style="color: #64748b;"><i class="fa-regular fa-calendar-check" style="color: #2563eb;"></i> Event Date:</span>
+        <strong style="color: #0f172a; margin-left: 4px;">{{ collection.event_date }}</strong>
+      </div>
+      <div>
+        <span style="color: #64748b;"><i class="fa-regular fa-calendar-xmark" style="color: #ef4444;"></i> Payment Deadline:</span>
+        <strong style="color: #b91c1c; margin-left: 4px;">{{ collection.payment_deadline }}</strong>
+      </div>
+      <div>
+        <span style="color: #64748b;"><i class="fa-solid fa-bullseye" style="color: #6366f1;"></i> Target Audience:</span>
+        <strong style="color: #0f172a; margin-left: 4px;">
+          {{ collection.target.type }} {% if collection.target.blocks %}(Blocks: {{ collection.target.blocks | join(', ') }}){% endif %}
+        </strong>
+      </div>
+      <div>
+        <span style="color: #64748b;"><i class="fa-solid fa-repeat" style="color: #10b981;"></i> Recurrence:</span>
+        <strong style="color: #0f172a; margin-left: 4px;">{{ collection.recurrence }}</strong>
+      </div>
+      <div>
+        <span style="color: #64748b;"><i class="fa-solid fa-clock-rotate-left" style="color: #f59e0b;"></i> Overdue Acceptance:</span>
+        <strong style="color: #0f172a; margin-left: 4px;">{{ 'Enabled' if collection.allow_overdue_payments else 'Disabled' }}</strong>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Financial Realization Metrics Grid -->
+<div class="metrics-grid" style="margin-bottom: 24px;">
+  <!-- Total Expected -->
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Expected Total</h4>
+      <div class="metric-value">₹{{ "{:,.0f}".format(stats.total_expected) }}</div>
+      <div class="metric-sub">{{ stats.total_records }} Total Invoices</div>
+    </div>
+    <div class="metric-icon-box box-blue">
+      <i class="fa-solid fa-sack-dollar"></i>
+    </div>
+  </div>
+
+  <!-- Realized / Paid -->
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Collected Funds</h4>
+      <div class="metric-value" style="color: #16a34a;">₹{{ "{:,.0f}".format(stats.total_collected) }}</div>
+      <div class="metric-sub">
+        <span style="color: #16a34a; font-weight: 700;">{{ stats.paid_count }} Settled</span> • {{ stats.collection_rate }}%
+      </div>
+    </div>
+    <div class="metric-icon-box box-emerald">
+      <i class="fa-solid fa-circle-check"></i>
+    </div>
+  </div>
+
+  <!-- Pending -->
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Pending Dues</h4>
+      <div class="metric-value" style="color: #d97706;">₹{{ "{:,.0f}".format(stats.total_pending) }}</div>
+      <div class="metric-sub">{{ stats.pending_count }} Residents Awaiting Payment</div>
+    </div>
+    <div class="metric-icon-box box-amber">
+      <i class="fa-solid fa-hourglass-half"></i>
+    </div>
+  </div>
+
+  <!-- Overdue -->
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Overdue Dues</h4>
+      <div class="metric-value" style="color: #ef4444;">₹{{ "{:,.0f}".format(stats.total_overdue) }}</div>
+      <div class="metric-sub">{{ stats.overdue_count }} Past Deadline</div>
+    </div>
+    <div class="metric-icon-box box-rose">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+    </div>
+  </div>
+</div>
+
+<!-- If Tour / Optional Event with Capacity -->
+{% if collection.type == 'Tour' or collection.max_participants %}
+<div class="content-card" style="margin-bottom: 24px; background: linear-gradient(135deg, #0f172a, #1e293b); color: #fff;">
+  <div class="card-body" style="padding: 20px 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+      <div>
+        <h4 style="color: #38bdf8; font-size: 1.1rem; margin-bottom: 4px;">
+          <i class="fa-solid fa-bus"></i> Participant & Capacity Tracking
+        </h4>
+        <p style="font-size: 0.85rem; color: #94a3b8; margin: 0;">
+          Live registration summary for tours and limited-seat community events.
+        </p>
+      </div>
+      <div style="display: flex; gap: 20px; text-align: center;">
+        <div>
+          <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Max Capacity</span>
+          <strong style="font-size: 1.3rem; color: #fff;">{{ collection.max_participants or 'Unlimited' }}</strong>
+        </div>
+        <div>
+          <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Registered</span>
+          <strong style="font-size: 1.3rem; color: #38bdf8;">{{ stats.total_participants }}</strong>
+        </div>
+        <div>
+          <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Confirmed (Paid)</span>
+          <strong style="font-size: 1.3rem; color: #4ade80;">{{ stats.paid_participants }}</strong>
+        </div>
+        {% if collection.max_participants %}
+          <div>
+            <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Available Slots</span>
+            <strong style="font-size: 1.3rem; color: #fbbf24;">{{ [0, collection.max_participants - stats.total_participants] | max }}</strong>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Block-Wise Collection Breakdown Table -->
+{% if stats.block_stats %}
+<div class="content-card" style="margin-bottom: 24px;">
+  <div class="card-header-bar">
+    <h3><i class="fa-solid fa-cubes"></i> Block-Wise Collection Analytics</h3>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    <div class="table-responsive">
+      <table class="portal-table">
+        <thead>
+          <tr>
+            <th>Block</th>
+            <th>Expected Amount</th>
+            <th>Collected Amount</th>
+            <th>Pending Amount</th>
+            <th>Paid / Total Invoices</th>
+            <th>Collection Rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in stats.block_stats %}
+            {% set brate = (b.collected / b.expected * 100) if b.expected > 0 else 0 %}
+            <tr>
+              <td><strong>Block {{ b._id }}</strong></td>
+              <td style="font-weight: 600;">₹{{ "{:,.2f}".format(b.expected) }}</td>
+              <td style="font-weight: 700; color: #16a34a;">₹{{ "{:,.2f}".format(b.collected) }}</td>
+              <td style="font-weight: 600; color: #d97706;">₹{{ "{:,.2f}".format(b.pending) }}</td>
+              <td>{{ b.paid_count }} / {{ b.total_count }} flats</td>
+              <td>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div style="background: #e2e8f0; height: 6px; width: 80px; border-radius: 999px; overflow: hidden;">
+                    <div style="background: #2563eb; width: {{ brate }}%; height: 100%;"></div>
+                  </div>
+                  <span style="font-size: 0.8rem; font-weight: 700;">{{ "{:,.1f}".format(brate) }}%</span>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Resident Payment Status Master Table -->
+<div class="content-card">
+  <div class="card-header-bar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+    <h3><i class="fa-solid fa-list-check"></i> Resident Payment & Participation Roster</h3>
+    <div style="font-size: 0.85rem; color: #64748b;">
+      Showing {{ payments | length }} records
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div style="padding: 14px 20px; background: #f8fafc; border-bottom: 1px solid var(--border-light);">
+    <form method="GET" action="{{ url_for('community.manager_collection_detail', collection_id=collection.collection_id) }}" style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Status:</label>
+        <select name="status" class="form-control" style="padding: 4px 10px; font-size: 0.82rem; width: auto;" onchange="this.form.submit()">
+          <option value="">All Statuses</option>
+          <option value="PAID" {% if filters.status == 'PAID' %}selected{% endif %}>PAID</option>
+          <option value="PENDING" {% if filters.status == 'PENDING' %}selected{% endif %}>PENDING</option>
+          <option value="OVERDUE" {% if filters.status == 'OVERDUE' %}selected{% endif %}>OVERDUE</option>
+          <option value="CANCELLED" {% if filters.status == 'CANCELLED' %}selected{% endif %}>CANCELLED</option>
+        </select>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Block:</label>
+        <select name="block" class="form-control" style="padding: 4px 10px; font-size: 0.82rem; width: auto;" onchange="this.form.submit()">
+          <option value="">All Blocks</option>
+          {% for blk in blocks %}
+            <option value="{{ blk.code }}" {% if filters.block == blk.code %}selected{% endif %}>Block {{ blk.code }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 6px; flex-grow: 1; max-width: 320px;">
+        <input type="text" name="q" class="form-control" placeholder="Search resident, flat, ID..." value="{{ filters.q }}" style="padding: 4px 10px; font-size: 0.82rem;">
+        <button type="submit" class="btn btn-secondary btn-sm" style="padding: 4px 12px;">Search</button>
+      </div>
+
+      {% if filters.status or filters.block or filters.q %}
+        <a href="{{ url_for('community.manager_collection_detail', collection_id=collection.collection_id) }}" class="btn btn-secondary btn-sm" style="padding: 4px 12px;">
+          Reset
+        </a>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="card-body" style="padding: 0;">
+    {% if payments %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>Payment ID</th>
+              <th>Flat & Block</th>
+              <th>Resident Name</th>
+              <th>Participants / Breakdown</th>
+              <th>Amount Due</th>
+              <th>Status</th>
+              <th>Transaction / Receipt</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in payments %}
+              <tr>
+                <td><strong style="font-family: monospace;">{{ p.payment_id }}</strong></td>
+                <td>
+                  <span style="font-weight: 700; color: #0f172a;">{{ p.flat }}</span>
+                  <span style="font-size: 0.75rem; color: #64748b; display: block;">Block {{ p.block }}</span>
+                </td>
+                <td>
+                  <div style="font-weight: 600; color: #0f172a;">{{ p.resident_name }}</div>
+                  <span style="font-size: 0.75rem; color: #64748b;">{{ p.resident_id }}</span>
+                </td>
+                <td>
+                  {% if p.participants %}
+                    <div style="font-size: 0.8rem;">
+                      <span style="font-weight: 700; color: #2563eb;">{{ p.participant_count }} Member(s):</span>
+                      <ul style="margin: 2px 0 0 14px; padding: 0; color: #475569; font-size: 0.75rem;">
+                        {% for mem in p.participants %}
+                          <li>{{ mem.name }} ({{ mem.relationship or mem.category }}) - ₹{{ "{:,.0f}".format(mem.amount) }}</li>
+                        {% endfor %}
+                      </ul>
+                    </div>
+                  {% else %}
+                    <span style="font-size: 0.8rem; color: #64748b;">1 Flat Unit</span>
+                  {% endif %}
+                </td>
+                <td style="font-size: 1rem; font-weight: 800; color: #0f172a;">
+                  ₹{{ "{:,.2f}".format(p.total_amount or p.amount) }}
+                </td>
+                <td>
+                  <span class="badge-status badge-{{ p.status.lower() }}">
+                    {{ p.status }}
+                  </span>
+                </td>
+                <td>
+                  {% if p.status == 'PAID' %}
+                    {% set p_info = p.payment or {} %}
+                    <div style="font-size: 0.78rem;">
+                      <strong style="color: #166534;"><i class="fa-solid fa-receipt"></i> {{ p_info.receipt_no or 'CPR-SETTLED' }}</strong>
+                      <div style="font-family: monospace; font-size: 0.72rem; color: #64748b;">{{ p_info.transaction_id or 'TXN-SIM' }}</div>
+                      <span style="font-size: 0.72rem; color: #64748b;">{{ p_info.method }} • {{ p_info.paid_at[:10] if p_info.paid_at else 'Paid' }}</span>
+                    </div>
+                  {% else %}
+                    <span style="font-size: 0.78rem; color: #94a3b8;">Unpaid</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if p.status == 'PAID' %}
+                    <div style="display: flex; gap: 6px;">
+                      <a href="{{ url_for('community.resident_payment_receipt', payment_id=p.payment_id) }}" class="btn btn-secondary btn-sm" target="_blank" title="View Web Receipt">
+                        <i class="fa-solid fa-receipt"></i>
+                      </a>
+                      <a href="{{ url_for('community.download_community_payment_pdf', payment_id=p.payment_id) }}" class="btn btn-primary btn-sm" title="Download PDF Receipt">
+                        <i class="fa-solid fa-file-pdf"></i>
+                      </a>
+                    </div>
+                  {% else %}
+                    <span style="font-size: 0.75rem; color: #64748b;">Pending settlement</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 40px; color: #64748b;">
+        <i class="fa-solid fa-users-slash" style="font-size: 2rem; color: #cbd5e1; margin-bottom: 8px;"></i>
+        <p>No payment records match the applied filters.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Modal: Edit Collection Details -->
+<div class="modal-backdrop" id="editCollectionModal">
+  <div class="modal-box" style="max-width: 600px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-pen-to-square" style="color: #2563eb;"></i> Edit Collection Details</h3>
+      <button class="modal-close-btn" onclick="closeModal('editCollectionModal')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('community.manager_update_collection', collection_id=collection.collection_id) }}">
+      <div class="modal-body" style="padding: 20px;">
+        <div class="form-group">
+          <label class="form-label">Collection Title</label>
+          <input type="text" name="title" class="form-control" value="{{ collection.title }}" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea name="description" class="form-control" rows="3">{{ collection.description }}</textarea>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label">Event Date</label>
+            <input type="date" name="event_date" class="form-control" value="{{ collection.event_date }}" required>
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label">Payment Deadline</label>
+            <input type="date" name="payment_deadline" class="form-control" value="{{ collection.payment_deadline }}" required>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label">Status</label>
+            <select name="status" class="form-control">
+              {% for st in collection_statuses %}
+                <option value="{{ st }}" {% if collection.status == st %}selected{% endif %}>{{ st }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label">Max Participants Capacity</label>
+            <input type="number" name="max_participants" class="form-control" value="{{ collection.max_participants or '' }}" placeholder="Unlimited">
+          </div>
+        </div>
+        <label style="font-size: 0.85rem; font-weight: 600; color: #475569; cursor: pointer;">
+          <input type="checkbox" name="allow_overdue_payments" value="true" {% if collection.allow_overdue_payments %}checked{% endif %}>
+          Accept late / overdue payments after deadline
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editCollectionModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Cancel Collection -->
+<div class="modal-backdrop" id="cancelCollectionModal">
+  <div class="modal-box" style="max-width: 480px;">
+    <div class="modal-header">
+      <h3 style="color: #ef4444;"><i class="fa-solid fa-triangle-exclamation"></i> Cancel Collection</h3>
+      <button class="modal-close-btn" onclick="closeModal('cancelCollectionModal')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('community.manager_cancel_collection', collection_id=collection.collection_id) }}">
+      <div class="modal-body" style="padding: 20px;">
+        <p style="font-size: 0.9rem; color: #475569; margin-bottom: 14px;">
+          Are you sure you want to cancel <strong>{{ collection.title }}</strong>? This will close all pending payment requests. Settled historical records will remain preserved in audit and accounting logs.
+        </p>
+        <div class="form-group">
+          <label class="form-label">Cancellation Reason</label>
+          <textarea name="reason" class="form-control" rows="2" placeholder="e.g. Event postponed due to weather conditions..." required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('cancelCollectionModal')">Back</button>
+        <button type="submit" class="btn btn-danger">Confirm Cancellation</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

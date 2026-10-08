@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+
+{% block title %}Daily Help Gate Entry & Check-In - Apartment Portal{% endblock %}
+{% block page_title %}Security Gate: Daily Help & Domestic Staff{% endblock %}
+{% block page_subtitle %}Verify authorized domestic maids, cooks, drivers, record gate entry/exit timestamps, and notify residents{% endblock %}
+
+{% block content %}
+<!-- Quick Security Metrics -->
+<div class="metrics-grid" style="margin-bottom: 24px;">
+  <!-- Expected Today -->
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Expected Today ({{ today_day }})</h4>
+      <div class="metric-value">{{ expected_today|length }}</div>
+      <div class="metric-sub">Scheduled domestic staff roster</div>
+    </div>
+    <div class="metric-icon-box box-blue">
+      <i class="fa-solid fa-clipboard-list"></i>
+    </div>
+  </div>
+
+  <!-- Currently Inside -->
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Currently Inside Society</h4>
+      <div class="metric-value" style="color: #059669;">{{ inside_records|length }}</div>
+      <div class="metric-sub">Domestic staff on premises</div>
+    </div>
+    <div class="metric-icon-box box-emerald">
+      <i class="fa-solid fa-person-walking-arrow-right"></i>
+    </div>
+  </div>
+
+  <!-- Completed Exits -->
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Exits Completed Today</h4>
+      <div class="metric-value" style="color: #6366f1;">
+        {{ (today_attendance|selectattr('status', 'equalto', 'COMPLETED')|list)|length }}
+      </div>
+      <div class="metric-sub">Staff checked out through gate</div>
+    </div>
+    <div class="metric-icon-box box-indigo">
+      <i class="fa-solid fa-door-closed"></i>
+    </div>
+  </div>
+</div>
+
+<!-- Gate Pass Search & Instant Verification Box -->
+<div class="content-card" style="margin-bottom: 24px; padding: 20px; background: linear-gradient(to right, #f8fafc, #eff6ff); border: 1px solid #bfdbfe;">
+  <h3 style="margin: 0 0 12px 0; font-size: 1.15rem; color: #1e3a8a;">
+    <i class="fa-solid fa-magnifying-glass" style="margin-right: 8px;"></i> Gate Pass Verification & Instant Search
+  </h3>
+  <form method="GET" action="{{ url_for('daily_help.security_daily_help_console') }}" style="display: flex; gap: 12px; flex-wrap: wrap;">
+    <div style="flex: 1; min-width: 250px;">
+      <input type="text" name="search" class="form-control" placeholder="Search by Staff Name, Phone Number, Help ID (e.g. HELP001), or Flat Number (e.g. A-204)..." value="{{ search_query or '' }}" autofocus>
+    </div>
+    <div>
+      <button type="submit" class="btn btn-primary" style="height: 100%;">
+        <i class="fa-solid fa-shield-halved"></i> Verify & Find Staff
+      </button>
+      {% if search_query %}
+        <a href="{{ url_for('daily_help.security_daily_help_console') }}" class="btn btn-secondary" style="height: 100%;">Clear</a>
+      {% endif %}
+    </div>
+  </form>
+
+  <!-- Search Results Preview if search was made -->
+  {% if search_query %}
+    <div style="margin-top: 16px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+      <h4 style="margin: 0 0 12px 0; font-size: 1rem; color: #1e293b;">
+        Search Results for "<span style="color: #2563eb;">{{ search_query }}</span>" ({{ search_results|length }} matches):
+      </h4>
+      
+      {% if search_results %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
+          {% for r in search_results %}
+            <div style="background: white; border-radius: 8px; padding: 16px; border: 2px solid 
+              {% if r.verification_status == 'APPROVED' and r.status == 'ACTIVE' %}#10b981
+              {% elif r.verification_status == 'PENDING' %}#f59e0b
+              {% else %}#ef4444{% endif %};">
+              
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                <div>
+                  <h4 style="margin: 0; font-size: 1.1rem; color: #1e293b;">{{ r.person.name }}</h4>
+                  <div style="font-size: 0.8rem; color: #64748b;">
+                    <strong>{{ r.help_id }}</strong> • {{ r.person.service_type|replace('_', ' ') }}
+                  </div>
+                </div>
+                <div>
+                  {% if r.verification_status == 'APPROVED' and r.status == 'ACTIVE' %}
+                    <span class="badge" style="background-color: #ecfdf5; color: #065f46; font-size: 0.75rem;"><i class="fa-solid fa-check-circle"></i> AUTHORIZED</span>
+                  {% elif r.verification_status == 'PENDING' %}
+                    <span class="badge" style="background-color: #fef3c7; color: #92400e; font-size: 0.75rem;"><i class="fa-solid fa-clock"></i> PENDING KYC</span>
+                  {% elif r.status == 'SUSPENDED' %}
+                    <span class="badge" style="background-color: #fef2f2; color: #991b1b; font-size: 0.75rem;"><i class="fa-solid fa-ban"></i> SUSPENDED</span>
+                  {% else %}
+                    <span class="badge" style="background-color: #fef2f2; color: #991b1b; font-size: 0.75rem;"><i class="fa-solid fa-ban"></i> UNAUTHORIZED</span>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div style="font-size: 0.85rem; color: #475569; margin-bottom: 12px; line-height: 1.5;">
+                <div><strong>Flat:</strong> <span class="badge" style="background-color: #e0e7ff; color: #4338ca;">{{ r.flat_id }}</span></div>
+                <div><strong>Phone:</strong> {{ r.person.phone }}</div>
+                <div><strong>Schedule:</strong> {{ r.schedule.entry_time }} - {{ r.schedule.exit_time }} ({{ r.schedule.days|join(', ') }})</div>
+              </div>
+
+              <!-- Gate Entry Control -->
+              <div style="padding-top: 10px; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+                {% if r.verification_status == 'APPROVED' and r.status == 'ACTIVE' %}
+                  {% set is_checked_in = false %}
+                  {% for att in inside_records %}
+                    {% if att.help_id == r.help_id %}
+                      {% set is_checked_in = true %}
+                    {% endif %}
+                  {% endfor %}
+
+                  {% if is_checked_in %}
+                    <span style="color: #059669; font-weight: 600; font-size: 0.85rem;"><i class="fa-solid fa-circle-check"></i> Inside Flat</span>
+                    <form action="{{ url_for('daily_help.security_check_out', help_id=r.help_id) }}" method="POST" style="display:inline;">
+                      <input type="hidden" name="help_id" value="{{ r.help_id }}">
+                      <button type="submit" class="btn btn-danger btn-sm"><i class="fa-solid fa-arrow-right-from-bracket"></i> Check Out</button>
+                    </form>
+                  {% else %}
+                    <form action="{{ url_for('daily_help.security_check_in', help_id=r.help_id) }}" method="POST" style="display:inline;">
+                      <input type="hidden" name="help_id" value="{{ r.help_id }}">
+                      <button type="submit" class="btn btn-success btn-sm"><i class="fa-solid fa-arrow-right-to-bracket"></i> Check In Gate</button>
+                    </form>
+                  {% endif %}
+                {% else %}
+                  <div style="color: #dc2626; font-size: 0.8rem; font-weight: 600;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> ENTRY RESTRICTED
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; color: #64748b;">
+          <p style="margin: 0;">No domestic staff record found matching "{{ search_query }}". Verify the spelling, phone number, or flat number.</p>
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+
+<!-- Two-Column Layout: Expected Today & Currently Inside -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; margin-bottom: 24px;">
+  <!-- Column 1: Today's Expected Roster -->
+  <div class="content-card">
+    <div class="card-header-bar" style="margin-bottom: 16px;">
+      <h3 style="margin: 0; font-size: 1.15rem; color: #1e293b;">
+        <i class="fa-solid fa-calendar-day" style="color: #2563eb; margin-right: 8px;"></i> Expected Domestic Staff Today ({{ today_day }})
+      </h3>
+    </div>
+
+    {% if expected_today %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>Staff / Role</th>
+              <th>Flat</th>
+              <th>Resident</th>
+              <th>Timing</th>
+              <th>Status</th>
+              <th>Gate Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for h in expected_today %}
+              <tr>
+                <td>
+                  <div style="font-weight: 600; color: #1e293b;">{{ h.person.name }}</div>
+                  <div style="font-size: 0.75rem; color: #64748b;">
+                    {{ h.person.service_type|replace('_', ' ') }} • {{ h.help_id }}
+                  </div>
+                </td>
+                <td>
+                  <span class="badge" style="background-color: #e0e7ff; color: #4338ca; font-weight: 700; padding: 2px 6px; border-radius: 4px;">
+                    Flat {{ h.flat_id }}
+                  </span>
+                </td>
+                <td>
+                  <div style="font-size: 0.85rem; font-weight: 600; color: #334155;">{{ h.resident_name or 'Resident' }}</div>
+                </td>
+                <td style="font-size: 0.85rem; color: #475569;">
+                  {{ h.schedule.entry_time }} - {{ h.schedule.exit_time }}
+                </td>
+                <td>
+                  {% if h.today_attendance and h.today_attendance.status == 'CHECKED_IN' %}
+                    <span class="badge" style="background-color: #ecfdf5; color: #065f46; font-weight: 700; font-size: 0.75rem;">
+                      <i class="fa-solid fa-circle-check"></i> INSIDE ({{ h.today_attendance.check_in }})
+                    </span>
+                  {% elif h.today_attendance and h.today_attendance.status in ['CHECKED_OUT', 'COMPLETED'] %}
+                    <span class="badge" style="background-color: #f1f5f9; color: #475569; font-size: 0.75rem;">
+                      <i class="fa-solid fa-door-closed"></i> LEFT ({{ h.today_attendance.check_out }})
+                    </span>
+                  {% else %}
+                    <span class="badge" style="background-color: #eff6ff; color: #1e40af; font-size: 0.75rem;">
+                      APPROVED
+                    </span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if h.today_attendance and h.today_attendance.status == 'CHECKED_IN' %}
+                    <form action="{{ url_for('daily_help.security_check_out', help_id=h.help_id) }}" method="POST" style="display:inline;">
+                      <input type="hidden" name="help_id" value="{{ h.help_id }}">
+                      <button type="submit" class="btn btn-danger btn-sm" style="font-size: 0.8rem; padding: 4px 10px;">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Check Out
+                      </button>
+                    </form>
+                  {% elif h.today_attendance and h.today_attendance.status in ['CHECKED_OUT', 'COMPLETED'] %}
+                    <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Checked Out</span>
+                  {% else %}
+                    <form action="{{ url_for('daily_help.security_check_in', help_id=h.help_id) }}" method="POST" style="display:inline;">
+                      <input type="hidden" name="help_id" value="{{ h.help_id }}">
+                      <button type="submit" class="btn btn-success btn-sm" style="font-size: 0.8rem; padding: 4px 10px;">
+                        <i class="fa-solid fa-arrow-right-to-bracket"></i> Check In
+                      </button>
+                    </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 32px; color: #64748b;">
+        <p style="margin: 0;">No domestic staff scheduled for entry today ({{ today_day }}).</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Column 2: Currently Inside Society -->
+  <div class="content-card">
+    <div class="card-header-bar" style="margin-bottom: 16px;">
+      <h3 style="margin: 0; font-size: 1.15rem; color: #1e293b;">
+        <i class="fa-solid fa-person-shelter" style="color: #059669; margin-right: 8px;"></i> Currently Inside Society ({{ inside_records|length }})
+      </h3>
+    </div>
+
+    {% if inside_records %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>Staff Name</th>
+              <th>Flat</th>
+              <th>Checked In At</th>
+              <th>Gate Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in inside_records %}
+              <tr>
+                <td>
+                  <div style="font-weight: 600; color: #1e293b;">{{ r.help_name or r.help_id }}</div>
+                  <div style="font-size: 0.75rem; color: #64748b;">{{ r.service_type|replace('_', ' ') if r.service_type else 'Domestic Help' }}</div>
+                </td>
+                <td>
+                  <span class="badge" style="background-color: #e0e7ff; color: #4338ca; font-weight: 700; padding: 2px 6px; border-radius: 4px;">
+                    Flat {{ r.flat_id }}
+                  </span>
+                </td>
+                <td>
+                  <span style="color: #059669; font-weight: 600; font-size: 0.9rem;">
+                    <i class="fa-solid fa-clock"></i> {{ r.check_in }}
+                  </span>
+                </td>
+                <td>
+                  <form action="{{ url_for('daily_help.security_check_out', help_id=r.help_id) }}" method="POST" style="display:inline;">
+                    <input type="hidden" name="help_id" value="{{ r.help_id }}">
+                    <button type="submit" class="btn btn-danger btn-sm" style="font-size: 0.8rem; padding: 4px 10px;">
+                      <i class="fa-solid fa-arrow-right-from-bracket"></i> Check Out
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 32px; color: #64748b;">
+        <p style="margin: 0;">No domestic staff currently inside the apartment campus.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Today's Full Activity Log -->
+<div class="content-card">
+  <div class="card-header-bar" style="margin-bottom: 16px;">
+    <h3 style="margin: 0; font-size: 1.15rem; color: #1e293b;">
+      <i class="fa-solid fa-clock-rotate-left" style="color: #6366f1; margin-right: 8px;"></i> Today's Domestic Staff Gate Activity Log ({{ today_date }})
+    </h3>
+  </div>
+
+  {% if today_attendance %}
+    <div class="table-responsive">
+      <table class="portal-table">
+        <thead>
+          <tr>
+            <th>Attendance ID</th>
+            <th>Staff Name</th>
+            <th>Flat</th>
+            <th>Check-In</th>
+            <th>Check-Out</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in today_attendance %}
+            <tr>
+              <td><strong>{{ a.attendance_id }}</strong></td>
+              <td style="font-weight: 600; color: #1e293b;">
+                {{ a.help_name or a.help_id }}
+              </td>
+              <td><span class="badge" style="background-color: #e0e7ff; color: #4338ca;">{{ a.flat_id }}</span></td>
+              <td>{{ a.check_in or '-' }}</td>
+              <td>{{ a.check_out or '-' }}</td>
+              <td>
+                <span class="badge" style="
+                  {% if a.status == 'COMPLETED' or a.status == 'CHECKED_OUT' %}background-color: #ecfdf5; color: #065f46;
+                  {% elif a.status == 'CHECKED_IN' %}background-color: #eff6ff; color: #1d4ed8;
+                  {% else %}background-color: #f1f5f9; color: #475569;{% endif %}">
+                  {{ a.status }}
+                </span>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div style="text-align: center; padding: 32px; color: #64748b;">
+      <p style="margin: 0;">No domestic staff gate activity recorded yet today.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

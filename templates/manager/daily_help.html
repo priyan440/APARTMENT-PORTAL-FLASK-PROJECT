@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block title %}Daily Help Verification & Operations - Greenwood Estates{% endblock %}
+{% block page_title %}Daily Help & Domestic Staff Management{% endblock %}
+{% block page_subtitle %}Review resident-submitted domestic help verification requests, manage security authorizations, and monitor attendance{% endblock %}
+
+{% block content %}
+<!-- Metrics Summary -->
+<div class="metrics-grid">
+  <!-- Total Registered -->
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Total Staff</h4>
+      <div class="metric-value">{{ analytics.total_help }}</div>
+      <div class="metric-sub">{{ analytics.active_help }} Active Approved</div>
+    </div>
+    <div class="metric-icon-box box-blue">
+      <i class="fa-solid fa-people-roof"></i>
+    </div>
+  </div>
+
+  <!-- Pending Verification -->
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Pending Approvals</h4>
+      <div class="metric-value" {% if analytics.pending_verification > 0 %}style="color: #d97706;"{% else %}style="color: #10b981;"{% endif %}>
+        {{ analytics.pending_verification }}
+      </div>
+      <div class="metric-sub">Awaiting manager KYC review</div>
+    </div>
+    <div class="metric-icon-box box-amber">
+      <i class="fa-solid fa-user-clock"></i>
+    </div>
+  </div>
+
+  <!-- Today's Gate Entries -->
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Today's Gate Entries</h4>
+      <div class="metric-value" style="color: #059669;">{{ analytics.today_entries }}</div>
+      <div class="metric-sub">{{ analytics.today_exits }} Exited • {{ analytics.today_entries - analytics.today_exits }} Inside</div>
+    </div>
+    <div class="metric-icon-box box-emerald">
+      <i class="fa-solid fa-door-open"></i>
+    </div>
+  </div>
+
+  <!-- Suspended / Blocked -->
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Suspended / Inactive</h4>
+      <div class="metric-value" style="color: #ef4444;">{{ analytics.suspended_help + analytics.inactive_help }}</div>
+      <div class="metric-sub">{{ analytics.suspended_help }} Suspended</div>
+    </div>
+    <div class="metric-icon-box box-indigo">
+      <i class="fa-solid fa-user-slash"></i>
+    </div>
+  </div>
+</div>
+
+<!-- Filters & Search Bar -->
+<div class="content-card" style="margin-bottom: 24px; padding: 16px 20px;">
+  <form method="GET" action="{{ url_for('daily_help.manager_daily_help_list') }}" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+    <div style="flex: 2; min-width: 200px;">
+      <input type="text" name="search" class="form-control" placeholder="Search by name, phone, help ID, or flat number (e.g. A-204)..." value="{{ search_query or '' }}">
+    </div>
+    <div style="flex: 1; min-width: 150px;">
+      <select name="status" class="form-select">
+        <option value="">All Verification Statuses</option>
+        <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending Verification</option>
+        <option value="APPROVED" {% if status_filter == 'APPROVED' %}selected{% endif %}>Approved</option>
+        <option value="REJECTED" {% if status_filter == 'REJECTED' %}selected{% endif %}>Rejected</option>
+      </select>
+    </div>
+    <div style="flex: 1; min-width: 150px;">
+      <select name="service_type" class="form-select">
+        <option value="">All Staff Roles</option>
+        {% for st in service_types %}
+          <option value="{{ st }}" {% if service_type_filter == st %}selected{% endif %}>{{ st }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <button type="submit" class="btn btn-primary"><i class="fa-solid fa-filter"></i> Apply</button>
+      <a href="{{ url_for('daily_help.manager_daily_help_list') }}" class="btn btn-secondary">Reset</a>
+    </div>
+  </form>
+</div>
+
+<!-- Daily Help Directory Table -->
+<div class="content-card">
+  <div class="card-header-bar" style="margin-bottom: 16px;">
+    <h3 style="margin: 0; font-size: 1.15rem; color: #1e293b;">
+      <i class="fa-solid fa-list-check" style="color: #6366f1; margin-right: 8px;"></i> Society Domestic Staff Directory
+    </h3>
+    <span style="font-size: 0.85rem; color: #64748b;">Showing {{ helpers|length }} staff records</span>
+  </div>
+
+  {% if helpers %}
+    <div class="table-responsive">
+      <table class="portal-table">
+        <thead>
+          <tr>
+            <th>Staff ID & Name</th>
+            <th>Flat & Resident</th>
+            <th>Role</th>
+            <th>Working Schedule</th>
+            <th>Documents</th>
+            <th>Verification</th>
+            <th>Status</th>
+            <th>Manager Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for h in helpers %}
+            <tr>
+              <td>
+                <div style="font-weight: 700; color: #1e293b;">{{ h.person.name }}</div>
+                <div style="font-size: 0.8rem; color: #64748b;">
+                  <span style="color: #6366f1; font-weight: 600;">{{ h.help_id }}</span> • {{ h.person.phone }}
+                </div>
+              </td>
+              <td>
+                <span class="badge" style="background-color: #e0e7ff; color: #4338ca; font-weight: 700; font-size: 0.85rem; padding: 2px 8px; border-radius: 4px;">
+                  Flat {{ h.flat_id }}
+                </span>
+                <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">{{ h.resident_name or h.resident_id }}</div>
+              </td>
+              <td>
+                <span style="font-size: 0.82rem; font-weight: 600; background: #f1f5f9; padding: 3px 8px; border-radius: 4px;">
+                  {{ h.person.service_type }}
+                </span>
+              </td>
+              <td style="font-size: 0.85rem;">
+                <div><i class="fa-solid fa-clock" style="color: #94a3b8; font-size: 0.75rem;"></i> {{ h.schedule.entry_time or '08:00' }} - {{ h.schedule.exit_time or '12:00' }}</div>
+                <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">
+                  {{ h.schedule.days|join(', ') if h.schedule and h.schedule.days else 'All Days' }}
+                </div>
+              </td>
+              <td>
+                <div style="display: flex; gap: 4px;">
+                  {% if h.documents and h.documents.photo_file_id %}
+                    <a href="{{ url_for('daily_help.download_help_document', file_id=h.documents.photo_file_id) }}" target="_blank" class="btn btn-secondary btn-sm" title="View Photo" style="padding: 2px 6px; font-size: 0.75rem;">
+                      <i class="fa-solid fa-image"></i> Photo
+                    </a>
+                  {% endif %}
+                  {% if h.documents and h.documents.id_proof_file_id %}
+                    <a href="{{ url_for('daily_help.download_help_document', file_id=h.documents.id_proof_file_id) }}" target="_blank" class="btn btn-secondary btn-sm" title="View ID Proof" style="padding: 2px 6px; font-size: 0.75rem;">
+                      <i class="fa-solid fa-id-card"></i> ID
+                    </a>
+                  {% endif %}
+                  {% if not (h.documents and (h.documents.photo_file_id or h.documents.id_proof_file_id)) %}
+                    <span style="color: #94a3b8; font-size: 0.75rem;">None</span>
+                  {% endif %}
+                </div>
+              </td>
+              <td>
+                <span class="badge-status badge-{{ 'approved' if h.verification_status == 'APPROVED' else ('rejected' if h.verification_status == 'REJECTED' else 'pending') }}">
+                  {{ h.verification_status }}
+                </span>
+                {% if h.verification_status == 'REJECTED' and h.rejection_reason %}
+                  <div style="font-size: 0.75rem; color: #ef4444; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ h.rejection_reason }}">
+                    {{ h.rejection_reason }}
+                  </div>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge-status badge-{{ h.status.lower() }}">
+                  {{ h.status }}
+                </span>
+              </td>
+              <td>
+                <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                  {% if h.verification_status == 'PENDING' %}
+                    <form action="{{ url_for('daily_help.manager_approve_help', help_id=h.help_id) }}" method="POST" style="display: inline;">
+                      <button type="submit" class="btn btn-success btn-sm" title="Approve KYC Pass">
+                        <i class="fa-solid fa-check"></i> Approve
+                      </button>
+                    </form>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="openRejectModal('{{ h.help_id }}', '{{ h.person.name }}')" title="Reject Application">
+                      <i class="fa-solid fa-xmark"></i> Reject
+                    </button>
+                  {% else %}
+                    {% if h.status == 'ACTIVE' %}
+                      <form action="{{ url_for('daily_help.manager_change_status', help_id=h.help_id) }}" method="POST" style="display: inline;">
+                        <input type="hidden" name="status" value="SUSPENDED">
+                        <button type="submit" class="btn btn-warning btn-sm" title="Suspend Gate Access">
+                          <i class="fa-solid fa-pause"></i> Suspend
+                        </button>
+                      </form>
+                    {% elif h.status == 'SUSPENDED' or h.status == 'INACTIVE' %}
+                      <form action="{{ url_for('daily_help.manager_change_status', help_id=h.help_id) }}" method="POST" style="display: inline;">
+                        <input type="hidden" name="status" value="ACTIVE">
+                        <button type="submit" class="btn btn-success btn-sm" title="Reactivate Access">
+                          <i class="fa-solid fa-play"></i> Reactivate
+                        </button>
+                      </form>
+                    {% endif %}
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div style="text-align: center; padding: 48px; color: #64748b;">
+      <i class="fa-solid fa-user-slash" style="font-size: 2.5rem; color: #cbd5e1; margin-bottom: 12px;"></i>
+      <p style="margin: 0; font-size: 1rem;">No daily help records match the selected criteria.</p>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Category Breakdown Section -->
+<div style="margin-top: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+  <div class="content-card">
+    <h4 style="margin: 0 0 12px 0; font-size: 1rem; color: #1e293b;"><i class="fa-solid fa-chart-pie" style="color: #6366f1; margin-right: 8px;"></i>Staff by Role Category</h4>
+    {% if analytics.by_category %}
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        {% for cat in analytics.by_category %}
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.88rem; padding: 6px 0; border-bottom: 1px solid #f1f5f9;">
+            <span style="color: #475569;">{{ cat._id }}</span>
+            <span class="badge" style="background-color: #eff6ff; color: #1d4ed8; font-weight: 700; padding: 2px 8px; border-radius: 4px;">{{ cat.count }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="color: #94a3b8; font-size: 0.85rem; margin: 0;">No category data available.</p>
+    {% endif %}
+  </div>
+
+  <div class="content-card">
+    <h4 style="margin: 0 0 12px 0; font-size: 1rem; color: #1e293b;"><i class="fa-solid fa-building" style="color: #059669; margin-right: 8px;"></i>Staff by Apartment Block</h4>
+    {% if analytics.by_block %}
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        {% for blk in analytics.by_block %}
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.88rem; padding: 6px 0; border-bottom: 1px solid #f1f5f9;">
+            <span style="color: #475569;">Block {{ blk._id or 'General' }}</span>
+            <span class="badge" style="background-color: #ecfdf5; color: #065f46; font-weight: 700; padding: 2px 8px; border-radius: 4px;">{{ blk.count }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="color: #94a3b8; font-size: 0.85rem; margin: 0;">No block data available.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Modal: Reject Daily Help -->
+<div class="modal-backdrop" id="rejectHelpModal">
+  <div class="modal-box" style="max-width: 480px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-ban" style="color: #ef4444;"></i> Reject Daily Help Verification</h3>
+      <button class="modal-close-btn" onclick="closeModal('rejectHelpModal')">&times;</button>
+    </div>
+    <form id="rejectHelpForm" method="POST">
+      <div class="modal-body">
+        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 12px;">
+          Reject application for <strong id="reject_staff_name"></strong>. The resident will receive this feedback.
+        </p>
+        <div class="form-group">
+          <label class="form-label">Reason for Rejection *</label>
+          <textarea name="reason" class="form-control" rows="3" placeholder="e.g. ID proof is unreadable, invalid contact number, police verification incomplete..." required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('rejectHelpModal')">Cancel</button>
+        <button type="submit" class="btn btn-danger">Confirm Rejection</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openRejectModal(helpId, staffName) {
+  const form = document.getElementById('rejectHelpForm');
+  form.action = `/manager/daily-help/${helpId}/reject`;
+  document.getElementById('reject_staff_name').innerText = staffName;
+  openModal('rejectHelpModal');
+}
+</script>
+{% endblock %}

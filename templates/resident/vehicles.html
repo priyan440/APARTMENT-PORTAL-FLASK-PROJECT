@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+
+{% block title %}Vehicles & Parking{% endblock %}
+{% block page_title %}Resident Vehicles & Parking{% endblock %}
+{% block page_subtitle %}Manage parking slot allocations and authorized resident vehicles{% endblock %}
+
+{% block content %}
+<div class="content-card">
+  <div class="card-header-bar">
+    <div>
+      <h3 style="margin-bottom: 4px;"><i class="fa-solid fa-car-side" style="color: #2563eb;"></i> My Registered Vehicles</h3>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Each active vehicle is allocated a globally unique parking spot in the community.</p>
+    </div>
+    <button type="button" class="btn btn-primary btn-sm" onclick="openAddVehicleModal()">
+      <i class="fa-solid fa-plus"></i> Register Vehicle
+    </button>
+  </div>
+
+  <div class="card-body" style="padding: 0;">
+    {% if vehicles %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>Vehicle ID</th>
+              <th>Vehicle Type</th>
+              <th>Registration Plate</th>
+              <th>Assigned Parking Slot</th>
+              <th>Status</th>
+              <th style="text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for v in vehicles %}
+              <tr>
+                <td><strong style="color: #1e293b;">{{ v.vehicle_id }}</strong></td>
+                <td>
+                  <span style="display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid {% if v.type == 'Car' %}fa-car{% elif v.type == 'Two-Wheeler' %}fa-motorcycle{% elif v.type == 'EV' %}fa-charging-station{% else %}fa-van-shuttle{% endif %}" style="color: #2563eb;"></i>
+                    <span>{{ v.type }}</span>
+                  </span>
+                </td>
+                <td>
+                  <span style="font-family: monospace; font-size: 0.95rem; font-weight: 700; background: #f1f5f9; color: #0f172a; padding: 4px 10px; border: 1px solid #cbd5e1; border-radius: 6px; letter-spacing: 1px;">
+                    {{ v.registration_number }}
+                  </span>
+                </td>
+                <td>
+                  <span style="display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5; color: #065f46; font-weight: 700; padding: 5px 12px; border-radius: 8px; border: 1px solid #a7f3d0;">
+                    <i class="fa-solid fa-square-parking" style="color: #059669;"></i> Slot {{ v.parking_slot }}
+                  </span>
+                </td>
+                <td>
+                  <span class="badge" style="background: #dcfce7; color: #166534; font-weight: 600; padding: 4px 10px; border-radius: 12px;">
+                    <i class="fa-solid fa-circle-check" style="font-size: 0.75rem;"></i> ACTIVE
+                  </span>
+                </td>
+                <td style="text-align: right;">
+                  <div style="display: inline-flex; gap: 6px;">
+                    <button type="button" class="btn btn-outline btn-sm" onclick="openEditVehicleModal('{{ v.vehicle_id }}', '{{ v.type }}', '{{ v.registration_number }}', '{{ v.parking_slot }}')" title="Change slot or vehicle info">
+                      <i class="fa-solid fa-pen-to-square"></i> Edit
+                    </button>
+                    <form method="POST" action="{{ url_for('resident.vehicles') }}" onsubmit="return confirm('Release this vehicle registration? The parking slot will become immediately available for other residents.');" style="display:inline;">
+                      <input type="hidden" name="action" value="delete">
+                      <input type="hidden" name="vehicle_id" value="{{ v.vehicle_id }}">
+                      <button type="submit" class="btn btn-danger btn-sm" title="Release slot and remove vehicle">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Release Slot
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 48px 20px; color: var(--text-muted);">
+        <div style="width: 72px; height: 72px; line-height: 72px; border-radius: 50%; background: #eff6ff; color: #3b82f6; margin: 0 auto 16px; font-size: 2rem;">
+          <i class="fa-solid fa-car-side"></i>
+        </div>
+        <h4 style="color: #1e293b; margin-bottom: 6px;">No vehicles registered yet</h4>
+        <p style="font-size: 0.88rem; max-width: 420px; margin: 0 auto 20px;">Register your four-wheeler, two-wheeler, or EV to select an available designated parking slot.</p>
+        <button type="button" class="btn btn-primary" onclick="openAddVehicleModal()">
+          <i class="fa-solid fa-plus"></i> Register Your First Vehicle
+        </button>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Parking Rule Alert Card -->
+<div class="content-card" style="margin-top: 24px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-left: 4px solid #3b82f6;">
+  <div class="card-body" style="padding: 16px 20px;">
+    <h4 style="font-size: 0.95rem; margin-bottom: 6px; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+      <i class="fa-solid fa-circle-info" style="color: #2563eb;"></i> Parking Allocation Policy
+    </h4>
+    <p style="font-size: 0.85rem; color: #475569; margin: 0; line-height: 1.5;">
+      Parking slots are globally unique across all apartment towers. Each active resident vehicle must occupy an unoccupied designated slot. Releasing a vehicle automatically frees up its slot for other residents.
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Add Vehicle Modal -->
+<div class="modal-backdrop" id="addVehicleModal">
+  <div class="modal-box" style="max-width: 520px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-car" style="color: #2563eb;"></i> Register Vehicle</h3>
+      <button class="modal-close-btn" onclick="closeModal('addVehicleModal')">&times;</button>
+    </div>
+    <form id="addVehicleForm" method="POST" action="{{ url_for('resident.vehicles') }}" onsubmit="return handleVehicleSubmit(event, 'add')">
+      <div class="modal-body">
+        <input type="hidden" name="action" value="add">
+        
+        <div id="addVehicleAlert" style="display: none; margin-bottom: 16px; padding: 10px 14px; border-radius: 6px; font-size: 0.88rem;"></div>
+
+        <div class="form-group">
+          <label class="form-label"><i class="fa-solid fa-list" style="color: #64748b; margin-right: 4px;"></i> Vehicle Type</label>
+          <select name="type" class="form-select" required>
+            <option value="Car">Sedan / SUV / Hatchback (Car)</option>
+            <option value="Two-Wheeler">Motorcycle / Scooter (Two-Wheeler)</option>
+            <option value="EV">Electric Vehicle (EV)</option>
+            <option value="Bicycle">Bicycle</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label"><i class="fa-solid fa-hashtag" style="color: #64748b; margin-right: 4px;"></i> Registration Plate Number</label>
+          <input type="text" name="registration_number" id="add_reg_num" class="form-control" placeholder="e.g. TN58AB1234" required style="text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+            <span><i class="fa-solid fa-square-parking" style="color: #64748b; margin-right: 4px;"></i> Designated Parking Slot</span>
+            <span id="addSlotLoading" style="font-size: 0.75rem; color: #2563eb; display: none;"><i class="fa-solid fa-spinner fa-spin"></i> Checking live slots...</span>
+          </label>
+          <select name="parking_slot" id="add_parking_slot" class="form-select" required style="font-weight: 600;">
+            <option value="">-- Choose an Available Parking Slot --</option>
+            {% for s in parking_slots %}
+              {% if s.is_occupied %}
+                <option value="{{ s.slot }}" disabled style="color: #94a3b8; background: #f8fafc;">
+                  {{ s.slot }} ({{ s.block }}) — ❌ Occupied
+                </option>
+              {% else %}
+                <option value="{{ s.slot }}" style="color: #065f46; font-weight: 600;">
+                  {{ s.slot }} ({{ s.block }}) — ✅ Available
+                </option>
+              {% endif %}
+            {% endfor %}
+          </select>
+          <small class="form-text" style="color: var(--text-muted); font-size: 0.78rem; margin-top: 4px; display: block;">
+            Occupied slots are marked in red and disabled. Only free slots can be selected.
+          </small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addVehicleModal')">Cancel</button>
+        <button type="submit" id="addSubmitBtn" class="btn btn-primary">
+          <i class="fa-solid fa-check"></i> Complete Registration
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Vehicle Modal -->
+<div class="modal-backdrop" id="editVehicleModal">
+  <div class="modal-box" style="max-width: 520px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-pen-to-square" style="color: #2563eb;"></i> Edit Vehicle & Slot</h3>
+      <button class="modal-close-btn" onclick="closeModal('editVehicleModal')">&times;</button>
+    </div>
+    <form id="editVehicleForm" method="POST" action="{{ url_for('resident.vehicles') }}" onsubmit="return handleVehicleSubmit(event, 'edit')">
+      <div class="modal-body">
+        <input type="hidden" name="action" value="edit">
+        <input type="hidden" name="vehicle_id" id="edit_vehicle_id">
+        
+        <div id="editVehicleAlert" style="display: none; margin-bottom: 16px; padding: 10px 14px; border-radius: 6px; font-size: 0.88rem;"></div>
+
+        <div class="form-group">
+          <label class="form-label">Vehicle Type</label>
+          <select name="type" id="edit_type" class="form-select" required>
+            <option value="Car">Sedan / SUV / Hatchback (Car)</option>
+            <option value="Two-Wheeler">Motorcycle / Scooter (Two-Wheeler)</option>
+            <option value="EV">Electric Vehicle (EV)</option>
+            <option value="Bicycle">Bicycle</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Registration Plate Number</label>
+          <input type="text" name="registration_number" id="edit_reg_num" class="form-control" required style="text-transform: uppercase; font-weight: 600;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Parking Slot</span>
+            <span id="editSlotLoading" style="font-size: 0.75rem; color: #2563eb; display: none;"><i class="fa-solid fa-spinner fa-spin"></i> Loading slots...</span>
+          </label>
+          <select name="parking_slot" id="edit_parking_slot" class="form-select" required style="font-weight: 600;">
+            <option value="">-- Select Parking Slot --</option>
+          </select>
+          <small class="form-text" style="color: var(--text-muted); font-size: 0.78rem;">
+            You can keep your currently assigned slot or switch to another unoccupied slot.
+          </small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editVehicleModal')">Cancel</button>
+        <button type="submit" id="editSubmitBtn" class="btn btn-primary">
+          <i class="fa-solid fa-floppy-disk"></i> Save Changes
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+async function refreshParkingSlotsDropdown(selectElementId, currentVehicleId = null, currentSlot = null, loadingId = null) {
+  const select = document.getElementById(selectElementId);
+  if (!select) return;
+  
+  if (loadingId) {
+    const loader = document.getElementById(loadingId);
+    if (loader) loader.style.display = "inline-block";
+  }
+  
+  try {
+    const url = currentVehicleId ? `/api/parking/available-slots?vehicle_id=${encodeURIComponent(currentVehicleId)}` : `/api/parking/available-slots`;
+    const res = await fetch(url);
+    const data = await res.json();
+    
+    if (data.success && data.slots) {
+      select.innerHTML = '<option value="">-- Choose a Parking Slot --</option>';
+      data.slots.forEach(s => {
+        const opt = document.createElement("option");
+        opt.value = s.slot;
+        
+        if (s.is_current || s.slot === currentSlot) {
+          opt.textContent = `${s.slot} (${s.block}) — ⭐ Current Assigned Slot`;
+          opt.selected = true;
+          opt.style.color = "#1e40af";
+          opt.style.fontWeight = "700";
+        } else if (s.is_occupied) {
+          opt.textContent = `${s.slot} (${s.block}) — ❌ Occupied`;
+          opt.disabled = true;
+          opt.style.color = "#94a3b8";
+          opt.style.background = "#f8fafc";
+        } else {
+          opt.textContent = `${s.slot} (${s.block}) — ✅ Available`;
+          opt.style.color = "#065f46";
+          opt.style.fontWeight = "600";
+        }
+        select.appendChild(opt);
+      });
+    }
+  } catch (err) {
+    console.error("Failed to load live parking slots:", err);
+  } finally {
+    if (loadingId) {
+      const loader = document.getElementById(loadingId);
+      if (loader) loader.style.display = "none";
+    }
+  }
+}
+
+function openAddVehicleModal() {
+  const alertBox = document.getElementById("addVehicleAlert");
+  if (alertBox) alertBox.style.display = "none";
+  refreshParkingSlotsDropdown("add_parking_slot", null, null, "addSlotLoading");
+  openModal("addVehicleModal");
+}
+
+function openEditVehicleModal(vehicleId, vehicleType, regNum, parkingSlot) {
+  const alertBox = document.getElementById("editVehicleAlert");
+  if (alertBox) alertBox.style.display = "none";
+  
+  document.getElementById("edit_vehicle_id").value = vehicleId;
+  document.getElementById("edit_type").value = vehicleType || "Car";
+  document.getElementById("edit_reg_num").value = regNum || "";
+  
+  refreshParkingSlotsDropdown("edit_parking_slot", vehicleId, parkingSlot, "editSlotLoading");
+  openModal("editVehicleModal");
+}
+
+async function handleVehicleSubmit(event, formType) {
+  event.preventDefault();
+  const form = event.target;
+  const alertId = formType === "add" ? "addVehicleAlert" : "editVehicleAlert";
+  const submitBtnId = formType === "add" ? "addSubmitBtn" : "editSubmitBtn";
+  
+  const alertBox = document.getElementById(alertId);
+  const submitBtn = document.getElementById(submitBtnId);
+  
+  const formData = new FormData(form);
+  const data = Object.fromEntries(formData.entries());
+  
+  if (!data.parking_slot) {
+    showAlert(alertBox, "Please select an available parking slot.", "danger");
+    return false;
+  }
+  
+  // Disable button while processing
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Validating...';
+  
+  try {
+    const res = await fetch("{{ url_for('resident.vehicles') }}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify(data)
+    });
+    
+    const result = await res.json();
+    
+    if (res.status === 200 || res.status === 201 || result.success) {
+      window.location.reload();
+    } else {
+      // 409 Conflict or 400 Validation error
+      showAlert(alertBox, result.message || "Parking slot allocation conflict. Please select another slot.", "danger");
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = formType === "add" ? '<i class="fa-solid fa-check"></i> Complete Registration' : '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
+      // Refresh slot list to update occupied indicators
+      if (formType === "add") {
+        refreshParkingSlotsDropdown("add_parking_slot", null, null, "addSlotLoading");
+      } else {
+        refreshParkingSlotsDropdown("edit_parking_slot", data.vehicle_id, null, "editSlotLoading");
+      }
+    }
+  } catch (err) {
+    // Fallback to regular form submission if fetch/json fails
+    form.submit();
+  }
+  return false;
+}
+
+function showAlert(box, message, type) {
+  if (!box) return;
+  box.style.display = "block";
+  box.style.background = type === "danger" ? "#fef2f2" : "#f0fdf4";
+  box.style.color = type === "danger" ? "#991b1b" : "#166534";
+  box.style.border = type === "danger" ? "1px solid #fecaca" : "1px solid #bbf7d0";
+  box.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="margin-right: 6px;"></i> ${message}`;
+}
+</script>
+{% endblock %}

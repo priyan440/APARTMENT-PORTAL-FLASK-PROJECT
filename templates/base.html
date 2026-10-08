@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Portal{% endblock %} - Apartment</title>
+
+  <!-- Fonts & Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+  <div class="app-container">
+    <!-- Role-Based Sidebar Navigation -->
+    <aside class="app-sidebar" id="appSidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">
+          <i class="fa-solid fa-city"></i>
+        </div>
+        <div class="brand-info">
+          <h2>APARTMENT</h2>
+          <span>Portal</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        {% if session_role == 'RESIDENT' %}
+        <div class="nav-section-title">Resident Portal</div>
+        <a href="{{ url_for('resident.dashboard') }}"
+          class="nav-item {% if request.path == url_for('resident.dashboard') %}active{% endif %}">
+          <i class="fa-solid fa-gauge-high"></i> Dashboard
+        </a>
+        <a href="{{ url_for('resident.profile') }}"
+          class="nav-item {% if request.path == url_for('resident.profile') %}active{% endif %}">
+          <i class="fa-solid fa-user-circle"></i> My Profile
+        </a>
+        <a href="{{ url_for('resident.family_members') }}"
+          class="nav-item {% if request.path == url_for('resident.family_members') %}active{% endif %}">
+          <i class="fa-solid fa-people-roof"></i> Family Members
+        </a>
+        <a href="{{ url_for('resident.vehicles') }}"
+          class="nav-item {% if request.path == url_for('resident.vehicles') %}active{% endif %}">
+          <i class="fa-solid fa-car-side"></i> Vehicles
+        </a>
+
+        <div class="nav-section-title">Payments & Finance</div>
+        <a href="{{ url_for('resident.bills') }}"
+          class="nav-item {% if request.path.startswith('/resident/bills') %}active{% endif %}">
+          <i class="fa-solid fa-file-invoice-dollar"></i> Maintenance Bills
+        </a>
+        <a href="{{ url_for('community.resident_community_payments') }}"
+          class="nav-item {% if request.path.startswith('/resident/community-') %}active{% endif %}">
+          <i class="fa-solid fa-hand-holding-dollar"></i> Community Contributions
+        </a>
+        <a href="{{ url_for('resident.complaints') }}"
+          class="nav-item {% if request.path.startswith('/resident/complaints') %}active{% endif %}">
+          <i class="fa-solid fa-wrench"></i> Complaints
+        </a>
+
+        <div class="nav-section-title">Amenities & Visitors</div>
+        <a href="{{ url_for('resident.amenities') }}"
+          class="nav-item {% if request.path == url_for('resident.amenities') %}active{% endif %}">
+          <i class="fa-solid fa-swimming-pool"></i> Amenity Booking
+        </a>
+        <a href="{{ url_for('resident.bookings') }}"
+          class="nav-item {% if request.path.startswith('/resident/bookings') %}active{% endif %}">
+          <i class="fa-solid fa-ticket"></i> My Bookings
+        </a>
+        <a href="{{ url_for('resident.visitors') }}"
+          class="nav-item {% if request.path == url_for('resident.visitors') %}active{% endif %}">
+          <i class="fa-solid fa-id-card-clip"></i> Visitors & Parcels
+        </a>
+        <a href="{{ url_for('daily_help.resident_daily_help_list') }}"
+          class="nav-item {% if request.path.startswith('/resident/daily-help') %}active{% endif %}">
+          <i class="fa-solid fa-people-roof"></i> Daily Help
+        </a>
+        <a href="{{ url_for('resident.announcements') }}"
+          class="nav-item {% if request.path == url_for('resident.announcements') %}active{% endif %}">
+          <i class="fa-solid fa-bullhorn"></i> Announcements
+        </a>
+        <a href="{{ url_for('notifications.list_notifications') }}"
+          class="nav-item {% if request.path.startswith('/notifications') %}active{% endif %}">
+          <i class="fa-solid fa-bell"></i> Notifications
+          {% if unread_count > 0 %}<span class="nav-badge">{{ unread_count }}</span>{% endif %}
+        </a>
+        <a href="{{ url_for('resident.emergency') }}"
+          class="nav-item {% if request.path == url_for('resident.emergency') %}active{% endif %}"
+          style="color: #f87171;">
+          <i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;"></i> Emergency SOS
+        </a>
+
+        {% elif session_role == 'MANAGER' %}
+        <div class="nav-section-title">Operations</div>
+        <a href="{{ url_for('manager.dashboard') }}"
+          class="nav-item {% if request.path == url_for('manager.dashboard') %}active{% endif %}">
+          <i class="fa-solid fa-chart-pie"></i> Dashboard
+        </a>
+        <a href="{{ url_for('manager.block_residents') }}"
+          class="nav-item {% if request.path == url_for('manager.block_residents') %}active{% endif %}">
+          <i class="fa-solid fa-building-user"></i> Residents (Block-Wise)
+        </a>
+        <a href="{{ url_for('manager.parking_management') }}"
+          class="nav-item {% if request.path == url_for('manager.parking_management') %}active{% endif %}">
+          <i class="fa-solid fa-square-parking"></i> Parking Slots
+        </a>
+        <a href="{{ url_for('daily_help.manager_daily_help_list') }}"
+          class="nav-item {% if request.path.startswith('/manager/daily-help') %}active{% endif %}">
+          <i class="fa-solid fa-people-roof"></i> Daily Help
+        </a>
+        <a href="{{ url_for('vendor.manager_vendors_list') }}"
+          class="nav-item {% if request.path.startswith('/manager/vendors') %}active{% endif %}">
+          <i class="fa-solid fa-truck-field"></i> Vendor Management
+        </a>
+        <a href="{{ url_for('manager.complaints') }}"
+          class="nav-item {% if request.path == url_for('manager.complaints') %}active{% endif %}">
+          <i class="fa-solid fa-screwdriver-wrench"></i> Complaints
+        </a>
+        <a href="{{ url_for('manager.technicians') }}"
+          class="nav-item {% if request.path == url_for('manager.technicians') %}active{% endif %}">
+          <i class="fa-solid fa-user-gear"></i> Technicians
+        </a>
+        <a href="{{ url_for('manager.amenity_bookings') }}"
+          class="nav-item {% if request.path == url_for('manager.amenity_bookings') %}active{% endif %}">
+          <i class="fa-solid fa-calendar-check"></i> Amenity Bookings
+        </a>
+        <a href="{{ url_for('manager.manage_amenities') }}"
+          class="nav-item {% if request.path == url_for('manager.manage_amenities') %}active{% endif %}">
+          <i class="fa-solid fa-cubes"></i> Amenities
+        </a>
+
+        <div class="nav-section-title">Finance & Collections</div>
+        <a href="{{ url_for('manager.bills') }}"
+          class="nav-item {% if request.path == url_for('manager.bills') %}active{% endif %}">
+          <i class="fa-solid fa-file-invoice-dollar"></i> Maintenance Bills
+        </a>
+        <a href="{{ url_for('community.manager_collections_list') }}"
+          class="nav-item {% if request.path.startswith('/manager/community-collections') %}active{% endif %}">
+          <i class="fa-solid fa-layer-group"></i> Community Collections
+        </a>
+
+        <div class="nav-section-title">Society & Logs</div>
+        <a href="{{ url_for('manager.visitors') }}"
+          class="nav-item {% if request.path == url_for('manager.visitors') %}active{% endif %}">
+          <i class="fa-solid fa-users"></i> Visitors Log
+        </a>
+        <a href="{{ url_for('manager.announcements') }}"
+          class="nav-item {% if request.path == url_for('manager.announcements') %}active{% endif %}">
+          <i class="fa-solid fa-bullhorn"></i> Announcements
+        </a>
+        <a href="{{ url_for('manager.analytics') }}"
+          class="nav-item {% if request.path == url_for('manager.analytics') %}active{% endif %}">
+          <i class="fa-solid fa-chart-line"></i> Analytics
+        </a>
+        <a href="{{ url_for('manager.audit_logs') }}"
+          class="nav-item {% if request.path == url_for('manager.audit_logs') %}active{% endif %}">
+          <i class="fa-solid fa-clock-rotate-left"></i> Activity Logs
+        </a>
+
+        {% elif session_role == 'TECHNICIAN' %}
+        <div class="nav-section-title">Field Work</div>
+        <a href="{{ url_for('technician.dashboard') }}"
+          class="nav-item {% if request.path == url_for('technician.dashboard') %}active{% endif %}">
+          <i class="fa-solid fa-gauge"></i> My Dashboard
+        </a>
+        <a href="{{ url_for('technician.assignments') }}"
+          class="nav-item {% if request.path == url_for('technician.assignments') %}active{% endif %}">
+          <i class="fa-solid fa-clipboard-list"></i> Assigned Tasks
+        </a>
+        <a href="{{ url_for('notifications.list_notifications') }}"
+          class="nav-item {% if request.path.startswith('/notifications') %}active{% endif %}">
+          <i class="fa-solid fa-bell"></i> Notifications
+          {% if unread_count > 0 %}<span class="nav-badge">{{ unread_count }}</span>{% endif %}
+        </a>
+
+        {% elif session_role == 'SECURITY' %}
+        <div class="nav-section-title">Gate Management</div>
+        <a href="{{ url_for('security.dashboard') }}"
+          class="nav-item {% if request.path == url_for('security.dashboard') %}active{% endif %}">
+          <i class="fa-solid fa-shield-halved"></i> Gate Dashboard
+        </a>
+        <a href="{{ url_for('security.visitors') }}"
+          class="nav-item {% if request.path == url_for('security.visitors') %}active{% endif %}">
+          <i class="fa-solid fa-address-book"></i> Visitors Entry
+        </a>
+        <a href="{{ url_for('daily_help.security_daily_help_console') }}"
+          class="nav-item {% if request.path.startswith('/security/daily-help') %}active{% endif %}">
+          <i class="fa-solid fa-people-roof"></i> Daily Help
+        </a>
+        <a href="{{ url_for('security.deliveries') }}"
+          class="nav-item {% if request.path == url_for('security.deliveries') %}active{% endif %}">
+          <i class="fa-solid fa-box-open"></i> Parcel Deliveries
+        </a>
+        <a href="{{ url_for('security.emergency') }}"
+          class="nav-item {% if request.path == url_for('security.emergency') %}active{% endif %}"
+          style="color: #f87171;">
+          <i class="fa-solid fa-tower-broadcast" style="color: #ef4444;"></i> Active SOS Alerts
+        </a>
+
+        {% elif session_role == 'ADMIN' %}
+        <div class="nav-section-title">Administration</div>
+        <a href="{{ url_for('admin.dashboard') }}"
+          class="nav-item {% if request.path == url_for('admin.dashboard') %}active{% endif %}">
+          <i class="fa-solid fa-server"></i> System Overview
+        </a>
+        <a href="{{ url_for('admin.users') }}"
+          class="nav-item {% if request.path == url_for('admin.users') %}active{% endif %}">
+          <i class="fa-solid fa-users-gear"></i> Staff & Users
+        </a>
+        <a href="{{ url_for('admin.blocks') }}"
+          class="nav-item {% if request.path == url_for('admin.blocks') %}active{% endif %}">
+          <i class="fa-solid fa-city"></i> Blocks & Flats
+        </a>
+        <a href="{{ url_for('manager.parking_management') }}"
+          class="nav-item {% if request.path == url_for('manager.parking_management') %}active{% endif %}">
+          <i class="fa-solid fa-square-parking"></i> Parking Slots
+        </a>
+        <a href="{{ url_for('vendor.manager_vendors_list') }}"
+          class="nav-item {% if request.path.startswith('/manager/vendors') %}active{% endif %}">
+          <i class="fa-solid fa-truck-field"></i> Vendors
+        </a>
+        <a href="{{ url_for('daily_help.manager_daily_help_list') }}"
+          class="nav-item {% if request.path.startswith('/manager/daily-help') %}active{% endif %}">
+          <i class="fa-solid fa-people-roof"></i> Daily Help
+        </a>
+        <a href="{{ url_for('manager.complaints') }}" class="nav-item">
+          <i class="fa-solid fa-screwdriver-wrench"></i> All Complaints
+        </a>
+        <a href="{{ url_for('manager.amenity_bookings') }}" class="nav-item">
+          <i class="fa-solid fa-calendar-check"></i> All Bookings
+        </a>
+        <a href="{{ url_for('manager.bills') }}" class="nav-item">
+          <i class="fa-solid fa-file-invoice-dollar"></i> Maintenance Billing
+        </a>
+        <a href="{{ url_for('community.manager_collections_list') }}" class="nav-item">
+          <i class="fa-solid fa-layer-group"></i> Community Collections
+        </a>
+        <a href="{{ url_for('manager.analytics') }}" class="nav-item">
+          <i class="fa-solid fa-chart-line"></i> Society Analytics
+        </a>
+        <a href="{{ url_for('admin.audit_logs') }}"
+          class="nav-item {% if request.path == url_for('admin.audit_logs') %}active{% endif %}">
+          <i class="fa-solid fa-shield-virus"></i> System Audit Logs
+        </a>
+        {% endif %}
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-mini-avatar">
+          {{ session_name[:2].upper() if session_name else 'US' }}
+        </div>
+        <div class="user-mini-meta">
+          <h4>{{ session_name }}</h4>
+          <p>{{ session.get('user_id', '') }}</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="app-main">
+      <header class="app-topbar">
+        <div class="topbar-left">
+          <div class="page-headline">
+            <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+            <p>{% block page_subtitle %}Greenwood Estates Management Portal{% endblock %}</p>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <!-- Role Badge -->
+          <span class="badge-role badge-role-{{ session_role.lower() if session_role else 'resident' }}">
+            {{ session_role }}
+          </span>
+
+          {% if session.get('flat') %}
+          <span
+            style="font-size:0.82rem; font-weight:600; color:#475569; background:#f1f5f9; padding:4px 10px; border-radius:6px;">
+            <i class="fa-solid fa-door-closed" style="color:#2563eb;"></i> Flat {{ session.get('flat') }}
+          </span>
+          {% endif %}
+
+          <!-- Notification Bell -->
+          <a href="{{ url_for('notifications.list_notifications') }}" class="btn-icon" title="Notifications">
+            <i class="fa-solid fa-bell"></i>
+            <span class="ping-dot" id="topbar-notif-badge"
+              style="{% if unread_count == 0 %}display:none;{% endif %}"></span>
+          </a>
+
+          <!-- Logout -->
+          <a href="{{ url_for('auth.logout') }}" class="btn-logout" title="Sign Out">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            <span>Logout</span>
+          </a>
+        </div>
+      </header>
+
+      <main class="page-content">
+        <!-- Flash Alerts -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="alerts-container">
+          {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">
+            <i
+              class="fa-solid {% if category == 'success' %}fa-circle-check{% elif category == 'danger' %}fa-circle-exclamation{% elif category == 'warning' %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}"></i>
+            <div>{{ message }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+
+  {% block modals %}{% endblock %}
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+
+</html>

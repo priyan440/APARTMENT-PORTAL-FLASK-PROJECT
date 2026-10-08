@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+
+{% block title %}Daily Help Management - Apartment Portal{% endblock %}
+{% block page_title %}Daily Help & Domestic Staff{% endblock %}
+{% block page_subtitle %}Manage your household maids, cooks, drivers, cleaners, and track their daily gate attendance{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+  <div>
+    <h3 style="margin: 0; font-size: 1.2rem; color: #1e293b;">My Registered Domestic Help</h3>
+    <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.9rem;">Gate pass authorization for flat <strong>{{ current_user.flat }}</strong> (Block {{ current_user.block }})</p>
+  </div>
+  <button type="button" class="btn btn-primary" onclick="openModal('addHelpModal')">
+    <i class="fa-solid fa-user-plus"></i> + Add Daily Help
+  </button>
+</div>
+
+<!-- Helper Cards Grid -->
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-bottom: 32px;">
+  {% if helpers %}
+    {% for h in helpers %}
+      <div class="content-card" style="padding: 20px; border-left: 4px solid 
+        {% if h.verification_status == 'APPROVED' and h.status == 'ACTIVE' %}#10b981
+        {% elif h.verification_status == 'PENDING' %}#f59e0b
+        {% elif h.verification_status == 'REJECTED' %}#ef4444
+        {% elif h.status == 'SUSPENDED' %}#dc2626
+        {% else %}#94a3b8{% endif %};">
+        
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 48px; height: 48px; border-radius: 50%; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: bold; overflow: hidden;">
+              {% if h.documents and h.documents.photo_file_id %}
+                <img src="{{ url_for('daily_help.download_help_document', file_id=h.documents.photo_file_id) }}" alt="{{ h.person.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+              {% else %}
+                <i class="fa-solid fa-user"></i>
+              {% endif %}
+            </div>
+            <div>
+              <h4 style="margin: 0; font-size: 1.1rem; color: #1e293b;">{{ h.person.name }}</h4>
+              <span class="badge" style="background-color: #f1f5f9; color: #475569; font-size: 0.75rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;">
+                {{ h.help_id }}
+              </span>
+            </div>
+          </div>
+          <div>
+            {% if h.verification_status == 'PENDING' %}
+              <span class="badge" style="background-color: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;"><i class="fa-solid fa-clock"></i> Pending KYC</span>
+            {% elif h.verification_status == 'REJECTED' %}
+              <span class="badge" style="background-color: #fef2f2; color: #991b1b; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;"><i class="fa-solid fa-ban"></i> Rejected</span>
+            {% elif h.status == 'SUSPENDED' %}
+              <span class="badge" style="background-color: #fef2f2; color: #991b1b; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;"><i class="fa-solid fa-triangle-exclamation"></i> Suspended</span>
+            {% elif h.status == 'INACTIVE' %}
+              <span class="badge" style="background-color: #f1f5f9; color: #475569; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;"><i class="fa-solid fa-user-xmark"></i> Inactive</span>
+            {% else %}
+              <span class="badge" style="background-color: #ecfdf5; color: #065f46; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;"><i class="fa-solid fa-check"></i> Approved & Active</span>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if h.verification_status == 'REJECTED' and h.rejection_reason %}
+          <div style="background: #fef2f2; border-left: 3px solid #ef4444; padding: 8px 12px; border-radius: 4px; margin-bottom: 12px; font-size: 0.85rem; color: #991b1b;">
+            <strong>Manager Note:</strong> {{ h.rejection_reason }}
+          </div>
+        {% endif %}
+
+        <div style="font-size: 0.88rem; color: #475569; margin-bottom: 12px; line-height: 1.6;">
+          <div><i class="fa-solid fa-briefcase" style="width: 20px; color: #6366f1;"></i> <strong>Role:</strong> {{ h.person.service_type }}</div>
+          <div><i class="fa-solid fa-phone" style="width: 20px; color: #6366f1;"></i> <strong>Phone:</strong> {{ h.person.phone }}</div>
+          <div><i class="fa-solid fa-clock" style="width: 20px; color: #6366f1;"></i> <strong>Schedule:</strong> {{ h.schedule.entry_time or '08:00' }} - {{ h.schedule.exit_time or '12:00' }}</div>
+          
+          <div style="margin-top: 6px; display: flex; gap: 4px; flex-wrap: wrap;">
+            {% for d in ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] %}
+              <span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: 600;
+                {% if h.schedule and h.schedule.days and d in h.schedule.days %}background-color: #e0e7ff; color: #4338ca;
+                {% else %}background-color: #f1f5f9; color: #94a3b8;{% endif %}">
+                {{ d }}
+              </span>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid #f1f5f9; gap: 8px;">
+          <div>
+            {% if h.documents and h.documents.id_proof_file_id %}
+              <a href="{{ url_for('daily_help.download_help_document', file_id=h.documents.id_proof_file_id) }}" target="_blank" class="btn btn-secondary btn-sm" style="font-size: 0.75rem;" title="View ID Proof">
+                <i class="fa-solid fa-id-card"></i> ID Proof
+              </a>
+            {% endif %}
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openEditModal('{{ h.help_id }}', '{{ h.person.name }}', '{{ h.person.phone }}', '{{ h.person.service_type }}', '{{ h.schedule.entry_time }}', '{{ h.schedule.exit_time }}', '{{ h.notes or '' }}')">
+              <i class="fa-solid fa-pen"></i> Edit
+            </button>
+            {% if h.status == 'ACTIVE' %}
+              <form action="{{ url_for('daily_help.resident_deactivate_help', help_id=h.help_id) }}" method="POST" onsubmit="return confirm('Deactivate domestic help {{ h.person.name }}?');" style="display: inline;">
+                <button type="submit" class="btn btn-danger btn-sm" title="Remove / Deactivate">
+                  <i class="fa-solid fa-user-minus"></i>
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="content-card" style="grid-column: 1 / -1; text-align: center; padding: 48px 20px;">
+      <i class="fa-solid fa-people-roof" style="font-size: 3rem; color: #cbd5e1; margin-bottom: 16px;"></i>
+      <h3 style="color: #1e293b; margin: 0 0 8px 0;">No Daily Help Registered Yet</h3>
+      <p style="color: #64748b; margin: 0 0 16px 0; max-width: 500px; margin-inline: auto;">
+        Register your household staff (maid, cook, driver, cleaner, etc.) for streamlined gate entry authorization and instant check-in notifications.
+      </p>
+      <button type="button" class="btn btn-primary" onclick="openModal('addHelpModal')">
+        <i class="fa-solid fa-plus"></i> Register Daily Help
+      </button>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Attendance History -->
+<div class="content-card">
+  <div class="card-header-bar" style="margin-bottom: 16px;">
+    <h3 style="margin: 0; font-size: 1.15rem; color: #1e293b;">
+      <i class="fa-solid fa-clock-rotate-left" style="color: #2563eb; margin-right: 8px;"></i> Recent Gate Entry & Exit Log
+    </h3>
+    <span style="font-size: 0.85rem; color: #64748b;">Last 30 attendance records</span>
+  </div>
+
+  {% if attendance_records %}
+    <div class="table-responsive">
+      <table class="portal-table">
+        <thead>
+          <tr>
+            <th>Staff Name</th>
+            <th>Date</th>
+            <th>Check In</th>
+            <th>Check Out</th>
+            <th>Gate Status</th>
+            <th>Security Guard</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in attendance_records %}
+            <tr>
+              <td>
+                <div style="font-weight: 600; color: #1e293b;">{{ a.help_name or a.help_id }}</div>
+                <div style="font-size: 0.75rem; color: #64748b;">{{ a.service_type }}</div>
+              </td>
+              <td>{{ a.date }}</td>
+              <td>
+                <span style="color: #059669; font-weight: 600;">
+                  <i class="fa-solid fa-arrow-right-to-bracket"></i> {{ a.check_in }}
+                </span>
+              </td>
+              <td>
+                {% if a.check_out %}
+                  <span style="color: #6366f1; font-weight: 600;">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> {{ a.check_out }}
+                  </span>
+                {% else %}
+                  <span class="badge" style="background-color: #ecfdf5; color: #065f46; font-size: 0.75rem;">Inside Society</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge-status badge-{{ 'active' if a.status == 'CHECKED_IN' else 'approved' }}">
+                  {{ a.status }}
+                </span>
+              </td>
+              <td>{{ a.guard_name or 'Main Gate Guard' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div style="text-align: center; padding: 32px; color: #64748b;">
+      <p style="margin: 0;">No gate check-in logs recorded for your domestic helpers yet.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Modal 1: Add Daily Help -->
+<div class="modal-backdrop" id="addHelpModal">
+  <div class="modal-box" style="max-width: 620px; max-height: 90vh; overflow-y: auto;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-user-plus" style="color: #2563eb;"></i> Register Domestic Daily Help</h3>
+      <button class="modal-close-btn" onclick="closeModal('addHelpModal')">&times;</button>
+    </div>
+    <form action="{{ url_for('daily_help.resident_add_help') }}" method="POST" enctype="multipart/form-data">
+      <div class="modal-body">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Staff Full Name *</label>
+            <input type="text" name="name" class="form-control" placeholder="e.g. Priya R" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mobile Phone Number *</label>
+            <input type="tel" name="phone" class="form-control" placeholder="e.g. 9876543210" required>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Service Category *</label>
+            <select name="service_type" class="form-select" required>
+              <option value="MAID">Maid / Housekeeping</option>
+              <option value="COOK">Cook / Chef</option>
+              <option value="DRIVER">Driver</option>
+              <option value="CLEANER">Deep Cleaner</option>
+              <option value="BABYSITTER">Babysitter / Nanny</option>
+              <option value="CARETAKER">Elderly Caretaker</option>
+              <option value="NEWSPAPER">Newspaper Delivery</option>
+              <option value="MILK_DELIVERY">Milk Delivery</option>
+              <option value="OTHER">Other Domestic Staff</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Gender</label>
+            <select name="gender" class="form-select">
+              <option value="Female">Female</option>
+              <option value="Male">Male</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Expected Entry Time *</label>
+            <input type="time" name="entry_time" class="form-control" value="08:00" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Expected Exit Time *</label>
+            <input type="time" name="exit_time" class="form-control" value="11:00" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Working Days *</label>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px;">
+            {% for d in ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] %}
+              <label style="display: flex; align-items: center; gap: 4px; font-weight: normal; cursor: pointer; font-size: 0.85rem;">
+                <input type="checkbox" name="working_days" value="{{ d }}" checked> {{ d }}
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Profile Photo</label>
+            <input type="file" name="photo" class="form-control" accept="image/*">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ID Proof (Aadhaar / Voter ID)</label>
+            <input type="file" name="id_proof" class="form-control" accept=".pdf,.png,.jpg,.jpeg">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Residential Address</label>
+          <input type="text" name="address" class="form-control" placeholder="Local address or agency reference">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Special Instructions / Notes</label>
+          <textarea name="notes" class="form-control" rows="2" placeholder="Specific task list, emergency instructions..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addHelpModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Submit for Verification</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal 2: Edit Daily Help -->
+<div class="modal-backdrop" id="editHelpModal">
+  <div class="modal-box" style="max-width: 550px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-user-pen" style="color: #2563eb;"></i> Edit Staff Details & Schedule</h3>
+      <button class="modal-close-btn" onclick="closeModal('editHelpModal')">&times;</button>
+    </div>
+    <form id="editHelpForm" method="POST">
+      <div class="modal-body">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Staff Name *</label>
+            <input type="text" name="name" id="edit_name" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone Number *</label>
+            <input type="tel" name="phone" id="edit_phone" class="form-control" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Service Type *</label>
+          <select name="service_type" id="edit_service_type" class="form-select" required>
+            <option value="MAID">Maid / Housekeeping</option>
+            <option value="COOK">Cook / Chef</option>
+            <option value="DRIVER">Driver</option>
+            <option value="CLEANER">Deep Cleaner</option>
+            <option value="BABYSITTER">Babysitter / Nanny</option>
+            <option value="CARETAKER">Elderly Caretaker</option>
+            <option value="NEWSPAPER">Newspaper Delivery</option>
+            <option value="MILK_DELIVERY">Milk Delivery</option>
+            <option value="OTHER">Other Domestic Staff</option>
+          </select>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Entry Time</label>
+            <input type="time" name="entry_time" id="edit_entry_time" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Exit Time</label>
+            <input type="time" name="exit_time" id="edit_exit_time" class="form-control">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Working Days</label>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px;">
+            {% for d in ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] %}
+              <label style="display: flex; align-items: center; gap: 4px; font-weight: normal; cursor: pointer; font-size: 0.85rem;">
+                <input type="checkbox" name="working_days" value="{{ d }}" checked> {{ d }}
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea name="notes" id="edit_notes" class="form-control" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editHelpModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openEditModal(helpId, name, phone, serviceType, entryTime, exitTime, notes) {
+  const form = document.getElementById('editHelpForm');
+  form.action = `/resident/daily-help/${helpId}/edit`;
+  document.getElementById('edit_name').value = name;
+  document.getElementById('edit_phone').value = phone;
+  document.getElementById('edit_service_type').value = serviceType;
+  document.getElementById('edit_entry_time').value = entryTime || '';
+  document.getElementById('edit_exit_time').value = exitTime || '';
+  document.getElementById('edit_notes').value = notes || '';
+  openModal('editHelpModal');
+}
+</script>
+{% endblock %}

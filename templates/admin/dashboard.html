@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+{% block page_title %}System Administration{% endblock %}
+{% block page_subtitle %}Enterprise estate metrics, role access controls, and full database oversight (Section 6){% endblock %}
+
+{% block content %}
+<!-- System-wide Metrics (Section 6) -->
+<div class="metrics-grid">
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Total Residents</h4>
+      <div class="metric-value">{{ summary.total_residents }}</div>
+      <div class="metric-sub">Registered accounts</div>
+    </div>
+    <div class="metric-icon-box box-blue">
+      <i class="fa-solid fa-users"></i>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Operational Staff</h4>
+      <div class="metric-value">{{ summary.total_managers + summary.total_technicians + summary.total_security }}</div>
+      <div class="metric-sub">{{ summary.total_managers }} Mgr | {{ summary.total_technicians }} Tech | {{ summary.total_security }} Sec</div>
+    </div>
+    <div class="metric-icon-box box-indigo">
+      <i class="fa-solid fa-users-gear"></i>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Towers & Blocks</h4>
+      <div class="metric-value">{{ summary.total_blocks }}</div>
+      <div class="metric-sub">{{ summary.total_flats }} total flats</div>
+    </div>
+    <div class="metric-icon-box box-cyan">
+      <i class="fa-solid fa-city"></i>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Occupancy Rate</h4>
+      <div class="metric-value">{{ summary.occupied_flats }} / {{ summary.total_flats }}</div>
+      <div class="metric-sub">{{ summary.vacant_flats }} vacant units</div>
+    </div>
+    <div class="metric-icon-box box-emerald">
+      <i class="fa-solid fa-building-circle-check"></i>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Open Complaints</h4>
+      <div class="metric-value">{{ summary.open_complaints }}</div>
+      <div class="metric-sub">System-wide tickets</div>
+    </div>
+    <div class="metric-icon-box box-rose">
+      <i class="fa-solid fa-screwdriver-wrench"></i>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Pending Amenity Slots</h4>
+      <div class="metric-value">{{ summary.pending_bookings }}</div>
+      <div class="metric-sub">Awaiting confirmation</div>
+    </div>
+    <div class="metric-icon-box box-amber">
+      <i class="fa-solid fa-calendar-check"></i>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Pending Dues</h4>
+      <div class="metric-value">₹{{ "{:,.0f}".format(summary.total_pending) }}</div>
+      <div class="metric-sub">Uncollected billing</div>
+    </div>
+    <div class="metric-icon-box box-amber">
+      <i class="fa-solid fa-file-invoice-dollar"></i>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Total Revenue Collected</h4>
+      <div class="metric-value" style="color: #166534;">₹{{ "{:,.0f}".format(summary.total_collected) }}</div>
+      <div class="metric-sub">Maintenance collections</div>
+    </div>
+    <div class="metric-icon-box box-emerald">
+      <i class="fa-solid fa-vault"></i>
+    </div>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+  <!-- Recent Users -->
+  <div class="content-card">
+    <div class="card-header-bar">
+      <h3><i class="fa-solid fa-users"></i> Recently Registered Users</h3>
+      <a href="{{ url_for('admin.users') }}" class="btn btn-secondary btn-sm">Manage All</a>
+    </div>
+    <div class="card-body" style="padding: 0;">
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Role</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in recent_users %}
+              <tr>
+                <td><strong>{{ u.user_id }}</strong></td>
+                <td>
+                  <strong>{{ u.name }}</strong>
+                  <span style="font-size: 0.72rem; color: #64748b; display: block;">{{ u.email }}</span>
+                </td>
+                <td>
+                  <span class="badge-role badge-role-{{ u.role.lower() }}" style="font-size: 0.7rem; padding: 2px 8px;">
+                    {{ u.role }}
+                  </span>
+                </td>
+                <td>
+                  <span class="badge-status {% if u.status == 'ACTIVE' %}badge-approved{% else %}badge-rejected{% endif %}">
+                    {{ u.status }}
+                  </span>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Audit Logs -->
+  <div class="content-card">
+    <div class="card-header-bar">
+      <h3><i class="fa-solid fa-shield-virus"></i> Security Audit Trail</h3>
+      <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-secondary btn-sm">Full Trail</a>
+    </div>
+    <div class="card-body" style="padding: 0;">
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>Actor</th>
+              <th>Action</th>
+              <th>Timestamp</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for l in recent_logs %}
+              <tr>
+                <td><strong>{{ l.user_name }}</strong> ({{ l.role }})</td>
+                <td>
+                  <span style="font-family: monospace; font-size: 0.78rem; font-weight: 700; color: #2563eb;">{{ l.action }}</span>
+                  <span style="font-size: 0.72rem; color: #64748b; display: block;">{{ l.details }}</span>
+                </td>
+                <td style="font-size: 0.75rem; color: #64748b;">{{ l.timestamp | datetime_format('%b %d, %I:%M %p') }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

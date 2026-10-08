@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Maintenance Billing{% endblock %}
+{% block page_title %}Maintenance Billing & Collections{% endblock %}
+{% block page_subtitle %}Generate monthly invoices, track dues, and monitor payment collections (Section 25){% endblock %}
+
+{% block content %}
+<div class="content-card">
+  <div class="card-header-bar">
+    <h3><i class="fa-solid fa-file-invoice-dollar"></i> Flat Maintenance Invoices</h3>
+    <button type="button" class="btn btn-primary btn-sm" onclick="openModal('generateBillModal')">
+      <i class="fa-solid fa-plus"></i> Issue New Monthly Bill
+    </button>
+  </div>
+
+  <div class="card-body" style="padding: 0;">
+    {% if bills %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>Bill ID</th>
+              <th>Flat</th>
+              <th>Resident</th>
+              <th>Period</th>
+              <th>Breakdown</th>
+              <th>Total Amount</th>
+              <th>Due Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for b in bills %}
+              <tr>
+                <td><strong>{{ b.bill_id }}</strong></td>
+                <td>
+                  <span style="font-weight: 700; color: #1e293b;">Flat {{ b.flat }}</span>
+                  <span style="font-size: 0.72rem; color: #64748b; display: block;">Block {{ b.block }}</span>
+                </td>
+                <td style="font-weight: 600;">{{ b.resident_name }}</td>
+                <td>{{ b.month_year }}</td>
+                <td style="font-size: 0.8rem; color: #475569;">
+                  Maint: ₹{{ "{:,.0f}".format(b.components.maintenance_charge) }} | Water: ₹{{ "{:,.0f}".format(b.components.water_charge) }} | Parking: ₹{{ "{:,.0f}".format(b.components.parking_charge) }}
+                </td>
+                <td style="font-weight: 700; color: #0f172a; font-size: 1rem;">
+                  ₹{{ "{:,.2f}".format(b.total_amount) }}
+                </td>
+                <td>{{ b.due_date }}</td>
+                <td>
+                  <span class="badge-status badge-{{ b.status.lower() }}">
+                    {{ b.status }}
+                  </span>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 48px; color: var(--text-muted);">
+        <i class="fa-solid fa-receipt" style="font-size: 2.5rem; color: #cbd5e1; margin-bottom: 12px;"></i>
+        <h4>No maintenance bills generated yet</h4>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Recent Collections Transactions -->
+<div class="content-card" style="margin-top: 24px;">
+  <div class="card-header-bar">
+    <h3><i class="fa-solid fa-money-bill-transfer"></i> Received Payment Transactions</h3>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if payments %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>Payment ID</th>
+              <th>Bill ID</th>
+              <th>Resident</th>
+              <th>Flat</th>
+              <th>Amount Settled</th>
+              <th>Method</th>
+              <th>Transaction Ref</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in payments %}
+              <tr>
+                <td><strong>{{ p.payment_id }}</strong></td>
+                <td>{{ p.bill_id }}</td>
+                <td>{{ p.resident_name }}</td>
+                <td>Block {{ p.block }} - Flat {{ p.flat }}</td>
+                <td style="font-weight: 700; color: #166534;">₹{{ "{:,.2f}".format(p.amount) }}</td>
+                <td>{{ p.payment_method }}</td>
+                <td style="font-family: monospace; font-size: 0.8rem;">{{ p.transaction_ref }}</td>
+                <td style="font-size: 0.8rem; color: #64748b;">{{ p.payment_date | datetime_format }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 32px; color: var(--text-muted);">
+        <p>No payments recorded yet.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Generate Bill Modal -->
+<div class="modal-backdrop" id="generateBillModal">
+  <div class="modal-box" style="max-width: 580px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-file-invoice-dollar" style="color: #2563eb;"></i> Generate Monthly Maintenance Bill</h3>
+      <button class="modal-close-btn" onclick="closeModal('generateBillModal')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('manager.bills') }}">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Occupied Flat</label>
+          <select name="flat" class="form-select" required onchange="updateBlockFromFlat(this)">
+            <option value="">-- Choose Flat --</option>
+            {% for f in occupied_flats %}
+              <option value="{{ f.flat_number }}" data-block="{{ f.block }}">
+                Flat {{ f.flat_number }} ({{ f.resident_name }})
+              </option>
+            {% endfor %}
+          </select>
+          <input type="hidden" name="block" id="selectedFlatBlock">
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Billing Period (Month Year)</label>
+            <input type="text" name="month_year" class="form-control" placeholder="e.g. November 2026" required value="{{ current_month_year or 'November 2026' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Due Date</label>
+            <input type="date" name="due_date" class="form-control" required value="2026-11-25">
+          </div>
+        </div>
+
+        <h4 style="font-size: 0.85rem; font-weight: 700; color: #475569; margin-top: 14px; margin-bottom: 8px; text-transform: uppercase;">
+          Itemized Charges (INR)
+        </h4>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Maintenance Charge</label>
+            <input type="number" name="maintenance_charge" class="form-control" value="2500" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Water & Sewage Charge</label>
+            <input type="number" name="water_charge" class="form-control" value="400" required>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Parking Charge</label>
+            <input type="number" name="parking_charge" class="form-control" value="300" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Other Common Charges</label>
+            <input type="number" name="other_charge" class="form-control" value="100">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('generateBillModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Generate Invoice</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function updateBlockFromFlat(sel) {
+    const selectedOption = sel.options[sel.selectedIndex];
+    const blk = selectedOption.getAttribute("data-block") || "A";
+    document.getElementById("selectedFlatBlock").value = blk;
+  }
+</script>
+{% endblock %}

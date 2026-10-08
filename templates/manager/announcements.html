@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Announcements{% endblock %}
+{% block page_title %}Society Bulletins & Notices{% endblock %}
+{% block page_subtitle %}Broadcast official society notices and maintenance updates (Section 28){% endblock %}
+
+{% block content %}
+<div class="content-card">
+  <div class="card-header-bar">
+    <h3><i class="fa-solid fa-bullhorn"></i> Published Society Notices</h3>
+    <button type="button" class="btn btn-primary btn-sm" onclick="openModal('createNoticeModal')">
+      <i class="fa-solid fa-plus"></i> Post Announcement
+    </button>
+  </div>
+
+  <div class="card-body" style="padding: 0;">
+    {% if announcements %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Title</th>
+              <th>Target Audience</th>
+              <th>Priority</th>
+              <th>Published By</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in announcements %}
+              <tr>
+                <td><strong>{{ a.announcement_id }}</strong></td>
+                <td>
+                  <strong style="color: #0f172a;">{{ a.title }}</strong>
+                  <p style="font-size: 0.78rem; color: #64748b;">{{ a.description[:90] }}...</p>
+                </td>
+                <td>
+                  <span style="background: #f1f5f9; padding: 3px 8px; border-radius: 4px; font-weight: 600; font-size: 0.8rem;">
+                    {{ a.target }}
+                  </span>
+                </td>
+                <td>
+                  <span style="font-weight: 700; font-size: 0.75rem; color: {% if a.priority == 'HIGH' %}#dc2626{% else %}#2563eb{% endif %};">
+                    {{ a.priority }}
+                  </span>
+                </td>
+                <td style="font-size: 0.82rem;">{{ a.published_by }}</td>
+                <td style="font-size: 0.82rem; color: #64748b;">{{ a.publish_date }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 48px; color: var(--text-muted);">
+        <p>No active announcements.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Post Announcement Modal -->
+<div class="modal-backdrop" id="createNoticeModal">
+  <div class="modal-box" style="max-width: 600px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-bullhorn" style="color: #2563eb;"></i> Broadcast Announcement</h3>
+      <button class="modal-close-btn" onclick="closeModal('createNoticeModal')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('manager.announcements') }}">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Notice Title</label>
+          <input type="text" name="title" class="form-control" placeholder="e.g. Lift Servicing Scheduled for Block B" required>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Target Audience</label>
+            <select name="target" class="form-select" required>
+              <option value="ALL">All Residents (Entire Society)</option>
+              <option value="BLOCK_A">Block A Only</option>
+              <option value="BLOCK_B">Block B Only</option>
+              <option value="BLOCK_C">Block C Only</option>
+              <option value="BLOCK_D">Block D Only</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Priority Level</label>
+            <select name="priority" class="form-select" required>
+              <option value="LOW">Low</option>
+              <option value="MEDIUM" selected>Medium</option>
+              <option value="HIGH">High / Urgent</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Notice Details & Instructions</label>
+          <textarea name="description" class="form-control" rows="4" placeholder="Detailed explanation, time windows, and contact instructions..." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Expiry Date (Optional)</label>
+          <input type="date" name="expiry_date" class="form-control">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('createNoticeModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-paper-plane"></i> Publish Bulletin
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

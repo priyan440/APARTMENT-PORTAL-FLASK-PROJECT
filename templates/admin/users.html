@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}User Management{% endblock %}
+{% block page_title %}Staff & User Accounts Management{% endblock %}
+{% block page_subtitle %}Provision operational staff, manage permissions, and toggle access states (Section 6){% endblock %}
+
+{% block content %}
+<div class="content-card">
+  <div class="card-header-bar">
+    <h3><i class="fa-solid fa-users-gear"></i> System Accounts Registry</h3>
+    <button type="button" class="btn btn-primary btn-sm" onclick="openModal('createStaffModal')">
+      <i class="fa-solid fa-user-plus"></i> Provision Staff Account
+    </button>
+  </div>
+
+  <div class="filter-bar">
+    <span style="font-size: 0.8rem; font-weight: 700; color: #475569;">Filter Role:</span>
+    <a href="{{ url_for('admin.users') }}" class="btn btn-sm {% if not active_role %}btn-primary{% else %}btn-secondary{% endif %}">All Roles</a>
+    <a href="{{ url_for('admin.users', role='RESIDENT') }}" class="btn btn-sm {% if active_role == 'RESIDENT' %}btn-primary{% else %}btn-secondary{% endif %}">Residents</a>
+    <a href="{{ url_for('admin.users', role='MANAGER') }}" class="btn btn-sm {% if active_role == 'MANAGER' %}btn-primary{% else %}btn-secondary{% endif %}">Managers</a>
+    <a href="{{ url_for('admin.users', role='TECHNICIAN') }}" class="btn btn-sm {% if active_role == 'TECHNICIAN' %}btn-primary{% else %}btn-secondary{% endif %}">Technicians</a>
+    <a href="{{ url_for('admin.users', role='SECURITY') }}" class="btn btn-sm {% if active_role == 'SECURITY' %}btn-primary{% else %}btn-secondary{% endif %}">Security</a>
+  </div>
+
+  <div class="card-body" style="padding: 0;">
+    {% if users %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>User ID</th>
+              <th>Full Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Role</th>
+              <th>Flat / Spec</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in users %}
+              <tr>
+                <td><strong>{{ u.user_id }}</strong></td>
+                <td style="font-weight: 700; color: #0f172a;">{{ u.name }}</td>
+                <td>{{ u.email }}</td>
+                <td>{{ u.phone }}</td>
+                <td>
+                  <span class="badge-role badge-role-{{ u.role.lower() }}" style="font-size: 0.72rem;">
+                    {{ u.role }}
+                  </span>
+                </td>
+                <td>
+                  {% if u.role == 'RESIDENT' %}
+                    Block {{ u.block }} - Flat {{ u.flat }} ({{ u.resident_type }})
+                  {% elif u.role == 'TECHNICIAN' %}
+                    {{ u.specialization }} (Rating: {{ u.rating }})
+                  {% else %}
+                    Staff
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="badge-status {% if u.status == 'ACTIVE' %}badge-approved{% else %}badge-rejected{% endif %}">
+                    {{ u.status }}
+                  </span>
+                </td>
+                <td>
+                  {% if u.role != 'ADMIN' %}
+                    <form method="POST" action="{{ url_for('admin.users') }}" style="display:inline;">
+                      <input type="hidden" name="action" value="toggle_status">
+                      <input type="hidden" name="user_id" value="{{ u.user_id }}">
+                      <button type="submit" class="btn btn-secondary btn-sm" title="Toggle Active/Deactivated">
+                        {{ 'Deactivate' if u.status == 'ACTIVE' else 'Activate' }}
+                      </button>
+                    </form>
+                  {% else %}
+                    <span style="color: #94a3b8; font-size: 0.78rem;">System Root</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 48px; color: var(--text-muted);">
+        <p>No users matching filter criteria.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Create Staff Modal -->
+<div class="modal-backdrop" id="createStaffModal">
+  <div class="modal-box" style="max-width: 580px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-user-shield" style="color: #2563eb;"></i> Provision Official Staff Account</h3>
+      <button class="modal-close-btn" onclick="closeModal('createStaffModal')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('admin.users') }}">
+      <div class="modal-body">
+        <input type="hidden" name="action" value="create_staff">
+
+        <div class="form-group">
+          <label class="form-label">Account Role</label>
+          <select name="role" id="staffRoleSelect" class="form-select" required onchange="toggleRoleFields()">
+            <option value="MANAGER">Apartment Manager</option>
+            <option value="RESIDENT">Resident</option>
+            <option value="TECHNICIAN">Maintenance Technician</option>
+            <option value="SECURITY">Security Personnel</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Account Full Name</label>
+          <input type="text" name="name" class="form-control" placeholder="e.g. Ramesh Chandra" required>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" name="email" class="form-control" placeholder="user@greenwood.com" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            <input type="tel" name="phone" class="form-control" placeholder="+91 98000 00000" required>
+          </div>
+        </div>
+
+        <!-- Resident Specific Fields -->
+        <div id="residentFields" style="display: none;">
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label">Residential Block</label>
+              <select name="block" id="adminBlockSelect" class="form-select" onchange="filterAdminFlats()">
+                <option value="">-- Select Block --</option>
+                {% for b in blocks %}
+                  <option value="{{ b.code }}">Block {{ b.code }} ({{ b.name }})</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Flat Number</label>
+              <select name="flat" id="adminFlatSelect" class="form-select">
+                <option value="">-- Select Block First --</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Resident Type</label>
+            <select name="resident_type" class="form-select">
+              <option value="OWNER">Flat Owner</option>
+              <option value="TENANT">Registered Tenant</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="specField" class="form-group" style="display: none;">
+          <label class="form-label">Technician Specialization</label>
+          <select name="specialization" class="form-select">
+            <option value="Plumbing">Plumbing</option>
+            <option value="Electrical">Electrical</option>
+            <option value="Lift">Lift & Elevators</option>
+            <option value="Cleaning">Cleaning & Sanitation</option>
+            <option value="Carpentry">Carpentry</option>
+            <option value="Security">Security & Access</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Initial Password</label>
+          <input type="password" name="password" class="form-control" value="staff123" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('createStaffModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Account</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const adminVacantFlats = [
+    {% for f in vacant_flats %}
+      { flat_number: "{{ f.flat_number }}", block: "{{ f.block }}" },
+    {% endfor %}
+  ];
+
+  function toggleRoleFields() {
+    const role = document.getElementById("staffRoleSelect").value;
+    document.getElementById("specField").style.display = (role === 'TECHNICIAN') ? 'block' : 'none';
+    document.getElementById("residentFields").style.display = (role === 'RESIDENT') ? 'block' : 'none';
+  }
+
+  function filterAdminFlats() {
+    const blk = document.getElementById("adminBlockSelect").value;
+    const flatSelect = document.getElementById("adminFlatSelect");
+    flatSelect.innerHTML = '<option value="">-- Select Available Flat --</option>';
+
+    if (!blk) {
+      flatSelect.innerHTML = '<option value="">-- Please Select Block First --</option>';
+      return;
+    }
+
+    const matching = adminVacantFlats.filter(f => f.block === blk);
+    if (matching.length === 0) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "No vacant flats in Block " + blk;
+      opt.disabled = true;
+      opt.selected = true;
+      flatSelect.appendChild(opt);
+      return;
+    }
+
+    matching.forEach(f => {
+      const opt = document.createElement("option");
+      opt.value = f.flat_number;
+      opt.textContent = `Flat ${f.flat_number} (Available)`;
+      flatSelect.appendChild(opt);
+    });
+  }
+</script>
+{% endblock %}

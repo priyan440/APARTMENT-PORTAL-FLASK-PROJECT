@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Technician Workload{% endblock %}
+{% block page_title %}Maintenance Technicians & Performance{% endblock %}
+{% block page_subtitle %}Workforce capacity, specialization tracking, and resident satisfaction ratings (Section 21){% endblock %}
+
+{% block content %}
+<div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+  {% for t in technicians %}
+    <div class="content-card" style="margin-bottom: 0;">
+      <div class="card-body">
+        <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
+          <div style="width: 50px; height: 50px; border-radius: 50%; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+            <i class="fa-solid fa-user-gear"></i>
+          </div>
+          <div>
+            <h3 style="font-size: 1.1rem; font-weight: 700; color: #0f172a;">{{ t.name }}</h3>
+            <span style="font-size: 0.78rem; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 2px 8px; border-radius: 4px;">
+              {{ t.specialization }} Specialist
+            </span>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #f8fafc; padding: 14px; border-radius: 8px; margin-bottom: 16px;">
+          <div>
+            <span style="font-size: 0.72rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Active Tasks</span>
+            <div style="font-size: 1.35rem; font-weight: 800; color: {% if t.active_tasks > 3 %}#dc2626{% else %}#166534{% endif %};">
+              {{ t.active_tasks }}
+            </div>
+          </div>
+          <div>
+            <span style="font-size: 0.72rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Completed Jobs</span>
+            <div style="font-size: 1.35rem; font-weight: 800; color: #0f172a;">
+              {{ t.completed_tasks }}
+            </div>
+          </div>
+          <div style="grid-column: span 2; border-top: 1px dashed #cbd5e1; padding-top: 8px; display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">Average Resident Rating:</span>
+            <span style="font-size: 1rem; font-weight: 700; color: #d97706;">
+              <i class="fa-solid fa-star"></i> {{ t.rating }} / 5.0
+            </span>
+          </div>
+        </div>
+
+        <div style="font-size: 0.8rem; color: #64748b;">
+          Staff ID: <strong>{{ t.user_id }}</strong> | Contact: <strong>{{ t.phone }}</strong>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

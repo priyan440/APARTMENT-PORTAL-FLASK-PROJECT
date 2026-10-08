@@ -1,0 +1,478 @@
+{% extends "base.html" %}
+
+{% block title %}Community Contributions & Events{% endblock %}
+{% block page_title %}Community Contributions & Special Payments{% endblock %}
+{% block page_subtitle %}Festival collections, tours, community events, and voluntary society contributions{% endblock %}
+
+{% block content %}
+<!-- Notice Banner -->
+<div class="content-card" style="background: linear-gradient(135deg, #1e1b4b, #312e81); color: #fff; margin-bottom: 28px;">
+  <div class="card-body" style="padding: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+    <div>
+      <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.15); padding: 4px 12px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; margin-bottom: 10px; color: #a5b4fc;">
+        <i class="fa-solid fa-sparkles"></i> Separate Financial Module
+      </div>
+      <h3 style="font-size: 1.3rem; font-weight: 800; color: #fff; margin-bottom: 6px;">Community & Event Contributions</h3>
+      <p style="font-size: 0.88rem; color: #c7d2fe; max-width: 700px; margin: 0;">
+        Special funds, festival celebrations, and tours are managed independently from your monthly maintenance bills. Settle dues or register your family for upcoming society events below.
+      </p>
+    </div>
+    <div style="text-align: right; background: rgba(255,255,255,0.1); padding: 14px 22px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15);">
+      <span style="font-size: 0.78rem; color: #c7d2fe; text-transform: uppercase; font-weight: 700; display: block;">Pending Community Dues</span>
+      <span style="font-size: 1.6rem; font-weight: 800; color: #fde047;">
+        ₹{{ "{:,.2f}".format(pending_payments | sum(attribute='total_amount')) }}
+      </span>
+      <span style="font-size: 0.75rem; color: #c7d2fe; display: block; margin-top: 2px;">{{ pending_payments | length }} Pending Invoices</span>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 1: Pending Actionable Contributions -->
+{% if pending_payments %}
+<div class="content-card" style="margin-bottom: 30px; border-top: 4px solid #f59e0b;">
+  <div class="card-header-bar" style="background: #fffbeb; border-bottom: 1px solid #fef3c7;">
+    <h3 style="color: #92400e;">
+      <i class="fa-solid fa-triangle-exclamation" style="color: #f59e0b;"></i> Action Required: Pending Contributions ({{ pending_payments | length }})
+    </h3>
+  </div>
+  <div class="card-body" style="padding: 20px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
+      {% for p in pending_payments %}
+        <div style="background: #ffffff; border: 1.5px solid #fde68a; border-radius: 12px; padding: 18px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+              <span class="badge-status" style="background: #e0e7ff; color: #3730a3; font-weight: 700; font-size: 0.75rem;">
+                {{ p.collection_type }}
+              </span>
+              <span class="badge-status badge-{{ p.status.lower() }}">
+                {{ p.status }}
+              </span>
+            </div>
+
+            <h4 style="font-size: 1.1rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">{{ p.collection_title }}</h4>
+            
+            {% if p.participants %}
+              <div style="font-size: 0.8rem; color: #475569; margin-bottom: 12px;">
+                <strong>Registered Participants ({{ p.participant_count }}):</strong>
+                <ul style="margin: 4px 0 0 16px; padding: 0; font-size: 0.78rem;">
+                  {% for mem in p.participants %}
+                    <li>{{ mem.name }} ({{ mem.relationship or mem.category }}) - ₹{{ "{:,.0f}".format(mem.amount) }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endif %}
+
+            <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: 8px; padding: 10px 14px; margin-bottom: 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span style="font-size: 0.78rem; color: #64748b;">Amount Payable:</span>
+                <strong style="font-size: 1.25rem; font-weight: 800; color: #b45309;">₹{{ "{:,.2f}".format(p.total_amount or p.amount) }}</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: #b91c1c;">
+                <span><i class="fa-regular fa-calendar-xmark"></i> Due Deadline:</span>
+                <strong>{{ p.payment_deadline }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <button type="button" class="btn btn-primary" style="width: 100%; padding: 10px; font-weight: 700;" onclick="openCommunityPaymentModal('{{ p.payment_id }}', '{{ p.collection_title }}', {{ p.total_amount or p.amount }}, '{{ p.collection_type }}')">
+            <i class="fa-solid fa-credit-card"></i> Pay Now (₹{{ "{:,.2f}".format(p.total_amount or p.amount) }})
+          </button>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- SECTION 2: Optional Society Events & Tours Open for Registration -->
+{% if optional_collections %}
+<div class="content-card" style="margin-bottom: 30px;">
+  <div class="card-header-bar" style="display: flex; justify-content: space-between; align-items: center;">
+    <h3><i class="fa-solid fa-bus-simple" style="color: #2563eb;"></i> Upcoming Events & Tours (Optional Participation)</h3>
+    <span style="font-size: 0.8rem; color: #64748b;">Select family members & join</span>
+  </div>
+  <div class="card-body" style="padding: 20px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 20px;">
+      {% for oc in optional_collections %}
+        {% set up = oc.user_payment %}
+        <div style="background: #ffffff; border: 1.5px solid {% if up and up.status == 'PAID' %}#86efac{% elif up and up.status == 'PENDING' %}#fde68a{% else %}var(--border-light){% endif %}; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: var(--shadow-sm);">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+              <span class="badge-status" style="background: #e0e7ff; color: #3730a3; font-weight: 700;">
+                <i class="fa-solid {% if oc.type == 'Tour' %}fa-mountain-sun{% elif oc.type == 'Sports Event' %}fa-medal{% else %}fa-star{% endif %}"></i> {{ oc.type }}
+              </span>
+              {% if up %}
+                <span class="badge-status badge-{{ up.status.lower() }}">
+                  {% if up.status == 'PAID' %}<i class="fa-solid fa-circle-check"></i> CONFIRMED / PAID{% else %}REGISTERED (PENDING PAYMENT){% endif %}
+                </span>
+              {% else %}
+                <span class="badge-status" style="background: #f1f5f9; color: #475569;">
+                  OPEN FOR REGISTRATION
+                </span>
+              {% endif %}
+            </div>
+
+            <h4 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">{{ oc.title }}</h4>
+            <p style="font-size: 0.85rem; color: #64748b; line-height: 1.4; margin-bottom: 14px;">{{ oc.description }}</p>
+
+            <!-- Pricing & Dates Box -->
+            <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 0.82rem;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                <span style="color: #64748b;">Pricing / Rate:</span>
+                <strong style="color: #0f172a; font-size: 0.95rem;">
+                  ₹{{ "{:,.0f}".format(oc.amount) }} / person
+                  {% if oc.has_tier_pricing %}<span style="font-size: 0.72rem; color: #2563eb;">(Tiers: Adult/Child/Senior)</span>{% endif %}
+                </strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                <span style="color: #64748b;"><i class="fa-regular fa-calendar"></i> Event Date:</span>
+                <strong>{{ oc.event_date }}</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                <span style="color: #64748b;"><i class="fa-regular fa-calendar-xmark"></i> Registration Closes:</span>
+                <strong style="color: #b91c1c;">{{ oc.payment_deadline }}</strong>
+              </div>
+              {% if oc.max_participants %}
+                <div style="display: flex; justify-content: space-between; border-top: 1px dashed #cbd5e1; padding-top: 4px; margin-top: 4px;">
+                  <span style="color: #64748b;"><i class="fa-solid fa-users"></i> Available Capacity:</span>
+                  <strong style="color: {% if oc.slots_left and oc.slots_left < 10 %}#ef4444{% else %}#16a34a{% endif %};">
+                    {{ oc.slots_left if oc.slots_left is not none else 'Open' }} / {{ oc.max_participants }} Slots Left
+                  </strong>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div>
+            {% if up and up.status == 'PAID' %}
+              <div style="display: flex; gap: 8px;">
+                <a href="{{ url_for('community.resident_payment_receipt', payment_id=up.payment_id) }}" class="btn btn-secondary btn-sm" style="flex: 1; text-align: center;">
+                  <i class="fa-solid fa-receipt"></i> View Receipt
+                </a>
+                <a href="{{ url_for('community.download_community_payment_pdf', payment_id=up.payment_id) }}" class="btn btn-primary btn-sm" style="flex: 1; text-align: center;">
+                  <i class="fa-solid fa-file-pdf"></i> Download PDF
+                </a>
+              </div>
+            {% elif up and up.status == 'PENDING' %}
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn btn-primary btn-sm" style="flex: 2; font-weight: 700;" onclick="openCommunityPaymentModal('{{ up.payment_id }}', '{{ oc.title }}', {{ up.total_amount or up.amount }}, '{{ oc.type }}')">
+                  <i class="fa-solid fa-credit-card"></i> Pay ₹{{ "{:,.0f}".format(up.total_amount or up.amount) }}
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" style="flex: 1;" onclick="openJoinModal('{{ oc.collection_id }}', '{{ oc.title }}', {{ oc.amount }}, {{ oc.has_tier_pricing | tojson }}, {{ oc.pricing_tiers | tojson }})">
+                  <i class="fa-solid fa-pen"></i> Edit Members
+                </button>
+              </div>
+            {% else %}
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn btn-primary btn-sm" style="flex: 2; font-weight: 700;" onclick="openJoinModal('{{ oc.collection_id }}', '{{ oc.title }}', {{ oc.amount }}, {{ oc.has_tier_pricing | tojson }}, {{ oc.pricing_tiers | tojson }})">
+                  <i class="fa-solid fa-user-plus"></i> Join Event / Select Family
+                </button>
+                <form method="POST" action="{{ url_for('community.resident_decline_event', collection_id=oc.collection_id) }}" style="margin: 0;" onsubmit="return confirm('Decline participation in {{ oc.title }}?')">
+                  <button type="submit" class="btn btn-secondary btn-sm" style="color: #64748b;" title="Decline event">
+                    <i class="fa-solid fa-xmark"></i> Decline
+                  </button>
+                </form>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- SECTION 3: Community Payment Transactions & History -->
+<div class="content-card">
+  <div class="card-header-bar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+    <h3><i class="fa-solid fa-receipt"></i> Community Payment History</h3>
+    <div style="font-size: 0.85rem; color: #64748b;">
+      Total Records: {{ payments | length }}
+    </div>
+  </div>
+
+  <div class="card-body" style="padding: 0;">
+    {% if payments %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>Payment ID</th>
+              <th>Collection / Event</th>
+              <th>Type</th>
+              <th>Participants</th>
+              <th>Amount Settled</th>
+              <th>Status</th>
+              <th>Receipt / Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in payments %}
+              <tr>
+                <td><strong style="font-family: monospace;">{{ p.payment_id }}</strong></td>
+                <td>
+                  <span style="font-weight: 700; color: #0f172a;">{{ p.collection_title }}</span>
+                  <span style="font-size: 0.75rem; color: #64748b; display: block;">Ref: {{ p.collection_id }}</span>
+                </td>
+                <td>
+                  <span class="badge-status" style="background: #f1f5f9; color: #475569; font-size: 0.75rem;">
+                    {{ p.collection_type }}
+                  </span>
+                </td>
+                <td>
+                  {% if p.participants %}
+                    <span style="font-weight: 600; color: #2563eb;">{{ p.participant_count }} Member(s)</span>
+                    <div style="font-size: 0.72rem; color: #64748b;">
+                      {% for mem in p.participants %}
+                        {{ mem.name }}{% if not loop.last %}, {% endif %}
+                      {% endfor %}
+                    </div>
+                  {% else %}
+                    <span style="font-size: 0.8rem; color: #64748b;">Flat Unit</span>
+                  {% endif %}
+                </td>
+                <td style="font-size: 1.05rem; font-weight: 800; color: {% if p.status == 'PAID' %}#166534{% else %}#0f172a{% endif %};">
+                  ₹{{ "{:,.2f}".format(p.total_amount or p.amount) }}
+                </td>
+                <td>
+                  <span class="badge-status badge-{{ p.status.lower() }}">
+                    {{ p.status }}
+                  </span>
+                </td>
+                <td>
+                  {% if p.status == 'PAID' %}
+                    <div style="display: flex; gap: 6px;">
+                      <a href="{{ url_for('community.resident_payment_receipt', payment_id=p.payment_id) }}" class="btn btn-secondary btn-sm" title="View Web Receipt">
+                        <i class="fa-solid fa-receipt"></i> Receipt
+                      </a>
+                      <a href="{{ url_for('community.download_community_payment_pdf', payment_id=p.payment_id) }}" class="btn btn-primary btn-sm" title="Download PDF">
+                        <i class="fa-solid fa-file-pdf"></i> PDF
+                      </a>
+                    </div>
+                  {% elif p.status in ['PENDING', 'OVERDUE'] %}
+                    <button type="button" class="btn btn-primary btn-sm" onclick="openCommunityPaymentModal('{{ p.payment_id }}', '{{ p.collection_title }}', {{ p.total_amount or p.amount }}, '{{ p.collection_type }}')">
+                      <i class="fa-solid fa-credit-card"></i> Pay Now
+                    </button>
+                  {% else %}
+                    <span style="font-size: 0.78rem; color: #94a3b8;">Closed</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 40px; color: #64748b;">
+        <i class="fa-solid fa-folder-open" style="font-size: 2.2rem; color: #cbd5e1; margin-bottom: 8px;"></i>
+        <p>No community contribution records found.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Modal: Join Event & Family Selection (Requirement 9 & 27) -->
+<div class="modal-backdrop" id="joinEventModal">
+  <div class="modal-box" style="max-width: 580px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-user-plus" style="color: #2563eb;"></i> Join Community Event / Tour</h3>
+      <button class="modal-close-btn" onclick="closeModal('joinEventModal')">&times;</button>
+    </div>
+    <form method="POST" id="joinEventForm">
+      <div class="modal-body" style="padding: 20px;">
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+          <h4 id="joinEventTitle" style="color: #1e3a8a; font-size: 1.1rem; font-weight: 800; margin-bottom: 4px;">Event Title</h4>
+          <span style="font-size: 0.8rem; color: #3b82f6;">Select which registered family members will be participating:</span>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label" style="font-weight: 700; color: #0f172a;">Select Participants (from your Flat Profile):</label>
+          
+          <!-- Self / Primary Resident -->
+          <div style="background: #fff; border: 1px solid var(--border-light); border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; font-weight: 600; color: #0f172a;">
+              <input type="checkbox" name="include_self" value="true" checked id="joinSelfCheckbox" onchange="recalculateTotal()">
+              <span>
+                <strong>{{ user.name }} (You)</strong>
+                <span style="font-size: 0.75rem; color: #64748b; display: block;">Primary Resident</span>
+              </span>
+            </label>
+            <div>
+              <select name="category_self" class="form-control" style="font-size: 0.8rem; padding: 4px 8px; width: auto;" onchange="recalculateTotal()">
+                <option value="ADULT">Adult</option>
+                <option value="SENIOR">Senior Citizen (60+)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Family Members List -->
+          {% if user.family_members %}
+            {% for fam in user.family_members %}
+              <div style="background: #fff; border: 1px solid var(--border-light); border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; font-weight: 600; color: #0f172a;">
+                  <input type="checkbox" name="selected_members" value="{{ fam.member_id }}" class="fam-member-checkbox" onchange="recalculateTotal()">
+                  <span>
+                    <strong>{{ fam.name }}</strong>
+                    <span style="font-size: 0.75rem; color: #64748b; display: block;">{{ fam.relationship }} • Age {{ fam.age }}</span>
+                  </span>
+                </label>
+                <div>
+                  <select name="category_{{ fam.member_id }}" class="form-control fam-member-category" style="font-size: 0.8rem; padding: 4px 8px; width: auto;" onchange="recalculateTotal()">
+                    <option value="ADULT" {% if fam.age >= 12 and fam.age < 60 %}selected{% endif %}>Adult</option>
+                    <option value="CHILD" {% if fam.age < 12 %}selected{% endif %}>Child (&lt;12)</option>
+                    <option value="SENIOR" {% if fam.age >= 60 %}selected{% endif %}>Senior (60+)</option>
+                  </select>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div style="font-size: 0.8rem; color: #64748b; padding: 8px 12px; background: #f8fafc; border-radius: 6px; margin-bottom: 8px;">
+              <i class="fa-solid fa-info-circle"></i> No family members registered. You can add them under <a href="{{ url_for('resident.family_members') }}" style="color: #2563eb;">Family Members</a>.
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Calculated Summary Box -->
+        <div style="background: #f8fafc; border: 1.5px solid var(--border-light); border-radius: 8px; padding: 14px; margin-top: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 0.85rem; color: #475569;">Selected Count:</span>
+            <strong id="joinTotalCount" style="color: #0f172a;">1 Member</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+            <span style="font-size: 1rem; font-weight: 700; color: #0f172a;">Estimated Total:</span>
+            <span id="joinTotalAmount" style="font-size: 1.4rem; font-weight: 800; color: #166534;">₹0.00</span>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('joinEventModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="padding: 10px 20px; font-weight: 700;">
+          <i class="fa-solid fa-check"></i> Confirm Registration
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Community Payment Simulator (Section 12 & 30) -->
+<div class="modal-backdrop" id="communityPaymentModal">
+  <div class="modal-box" style="max-width: 520px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-shield-halved" style="color: #10b981;"></i> Settle Community Contribution (Test Gateway)</h3>
+      <button class="modal-close-btn" onclick="closeModal('communityPaymentModal')">&times;</button>
+    </div>
+    <form method="POST" id="communityPaymentForm">
+      <div class="modal-body" style="padding: 20px;">
+        <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 0.85rem; color: #64748b;">Contribution Purpose:</span>
+            <strong id="cpayModalTitle" style="color: #0f172a;">Diwali Celebration</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+            <span style="font-size: 1rem; font-weight: 700; color: #0f172a;">Total Amount:</span>
+            <span id="cpayModalAmount" style="font-size: 1.4rem; font-weight: 800; color: #166534;">₹0.00</span>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label">Select Payment Method</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+            <label style="border: 1px solid var(--border-light); padding: 12px; border-radius: 8px; text-align: center; cursor: pointer; background: #fff;" onclick="selectMethod(this)">
+              <input type="radio" name="payment_method" value="UPI" checked style="margin-bottom: 4px;">
+              <div style="font-size: 0.85rem; font-weight: 700;"><i class="fa-solid fa-mobile-screen"></i> UPI</div>
+            </label>
+            <label style="border: 1px solid var(--border-light); padding: 12px; border-radius: 8px; text-align: center; cursor: pointer; background: #fff;" onclick="selectMethod(this)">
+              <input type="radio" name="payment_method" value="CARD" style="margin-bottom: 4px;">
+              <div style="font-size: 0.85rem; font-weight: 700;"><i class="fa-solid fa-credit-card"></i> Card</div>
+            </label>
+            <label style="border: 1px solid var(--border-light); padding: 12px; border-radius: 8px; text-align: center; cursor: pointer; background: #fff;" onclick="selectMethod(this)">
+              <input type="radio" name="payment_method" value="NETBANKING" style="margin-bottom: 4px;">
+              <div style="font-size: 0.85rem; font-weight: 700;"><i class="fa-solid fa-building-columns"></i> NetBank</div>
+            </label>
+          </div>
+        </div>
+
+        <div style="font-size: 0.78rem; color: #059669; background: #ecfdf5; padding: 10px; border-radius: 6px; border: 1px solid #a7f3d0;">
+          <i class="fa-solid fa-lock"></i> <strong>Safe Simulated Mode:</strong> Test payment sandbox. Instantly marks contribution settled and issues verifiable digital receipt.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('communityPaymentModal')">Cancel</button>
+        <button type="submit" class="btn btn-success" style="padding: 10px 20px; font-weight: 700;">
+          <i class="fa-solid fa-check"></i> Authorize & Settle Contribution
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let currentBaseAmount = 0;
+  let currentTierPricing = {};
+  let currentHasTier = false;
+
+  function openJoinModal(collectionId, title, baseAmount, hasTier, tiers) {
+    document.getElementById("joinEventForm").action = `/resident/community-collections/${collectionId}/join`;
+    document.getElementById("joinEventTitle").innerText = title;
+    currentBaseAmount = baseAmount;
+    currentHasTier = hasTier;
+    currentTierPricing = tiers || {};
+    
+    // Reset selections
+    document.getElementById("joinSelfCheckbox").checked = true;
+    document.querySelectorAll(".fam-member-checkbox").forEach(cb => cb.checked = false);
+    recalculateTotal();
+    openModal("joinEventModal");
+  }
+
+  function recalculateTotal() {
+    let total = 0;
+    let count = 0;
+
+    const adultPrice = currentHasTier ? (currentTierPricing.ADULT || currentBaseAmount) : currentBaseAmount;
+    const childPrice = currentHasTier ? (currentTierPricing.CHILD || currentBaseAmount * 0.6) : currentBaseAmount;
+    const seniorPrice = currentHasTier ? (currentTierPricing.SENIOR || currentBaseAmount * 0.8) : currentBaseAmount;
+
+    // Self
+    const selfChecked = document.getElementById("joinSelfCheckbox").checked;
+    if (selfChecked) {
+      const selfCat = document.querySelector("select[name='category_self']").value;
+      total += (selfCat === 'SENIOR' ? seniorPrice : adultPrice);
+      count++;
+    }
+
+    // Family members
+    document.querySelectorAll(".fam-member-checkbox").forEach(cb => {
+      if (cb.checked) {
+        const memId = cb.value;
+        const catSelect = document.querySelector(`select[name='category_${memId}']`);
+        const cat = catSelect ? catSelect.value : 'ADULT';
+        if (cat === 'CHILD') total += childPrice;
+        else if (cat === 'SENIOR') total += seniorPrice;
+        else total += adultPrice;
+        count++;
+      }
+    });
+
+    document.getElementById("joinTotalCount").innerText = `${count} Member(s)`;
+    document.getElementById("joinTotalAmount").innerText = `₹${total.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  }
+
+  function openCommunityPaymentModal(paymentId, title, amount, type) {
+    document.getElementById("communityPaymentForm").action = `/resident/community-payments/${paymentId}/pay`;
+    document.getElementById("cpayModalTitle").innerText = `${title} (${type})`;
+    document.getElementById("cpayModalAmount").innerText = `₹${amount.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    openModal("communityPaymentModal");
+  }
+
+  function selectMethod(el) {
+    el.querySelector("input[type='radio']").checked = true;
+  }
+</script>
+{% endblock %}

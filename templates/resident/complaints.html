@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}My Complaints{% endblock %}
+{% block page_title %}Complaints & Maintenance{% endblock %}
+{% block page_subtitle %}Raise service requests with photo/video proofs and track technicians{% endblock %}
+
+{% block content %}
+<div class="content-card">
+  <div class="card-header-bar">
+    <h3><i class="fa-solid fa-wrench"></i> Maintenance Requests</h3>
+    <button type="button" class="btn btn-primary" onclick="openModal('newComplaintModal')">
+      <i class="fa-solid fa-plus"></i> Raise New Complaint
+    </button>
+  </div>
+
+  <!-- Filter tabs -->
+  <div class="filter-bar">
+    <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Status Filter:</span>
+    <a href="{{ url_for('resident.complaints') }}" class="btn btn-sm {% if not active_status %}btn-primary{% else %}btn-secondary{% endif %}">All</a>
+    <a href="{{ url_for('resident.complaints', status='OPEN') }}" class="btn btn-sm {% if active_status == 'OPEN' %}btn-primary{% else %}btn-secondary{% endif %}">Open</a>
+    <a href="{{ url_for('resident.complaints', status='ASSIGNED') }}" class="btn btn-sm {% if active_status == 'ASSIGNED' %}btn-primary{% else %}btn-secondary{% endif %}">Assigned</a>
+    <a href="{{ url_for('resident.complaints', status='IN_PROGRESS') }}" class="btn btn-sm {% if active_status == 'IN_PROGRESS' %}btn-primary{% else %}btn-secondary{% endif %}">In Progress</a>
+    <a href="{{ url_for('resident.complaints', status='RESOLVED') }}" class="btn btn-sm {% if active_status == 'RESOLVED' %}btn-primary{% else %}btn-secondary{% endif %}">Resolved</a>
+    <a href="{{ url_for('resident.complaints', status='CLOSED') }}" class="btn btn-sm {% if active_status == 'CLOSED' %}btn-primary{% else %}btn-secondary{% endif %}">Closed</a>
+  </div>
+
+  <div class="card-body" style="padding: 0;">
+    {% if complaints %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Category</th>
+              <th>Issue Title</th>
+              <th>Priority</th>
+              <th>Technician</th>
+              <th>Status</th>
+              <th>Date Filed</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in complaints %}
+              <tr>
+                <td><strong>{{ c.complaint_id }}</strong></td>
+                <td>
+                  <span style="background: #f1f5f9; padding: 3px 8px; border-radius: 4px; font-weight: 600; font-size: 0.78rem;">
+                    {{ c.category }}
+                  </span>
+                </td>
+                <td style="font-weight: 600;">{{ c.title }}</td>
+                <td>
+                  <span style="font-weight: 700; font-size: 0.75rem; color: {% if c.priority in ['HIGH', 'EMERGENCY'] %}#dc2626{% elif c.priority == 'MEDIUM' %}#d97706{% else %}#2563eb{% endif %};">
+                    {{ c.priority }}
+                  </span>
+                </td>
+                <td>
+                  {% if c.technician_name %}
+                    <span style="color: #2563eb; font-weight: 600;"><i class="fa-solid fa-user-gear"></i> {{ c.technician_name }}</span>
+                  {% else %}
+                    <span style="color: #94a3b8; font-style: italic;">Unassigned</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="badge-status badge-{{ c.status.lower() }}">
+                    {{ c.status }}
+                  </span>
+                </td>
+                <td style="font-size: 0.8rem; color: var(--text-muted);">
+                  {{ c.created_at | datetime_format('%b %d, %Y') }}
+                </td>
+                <td>
+                  <a href="{{ url_for('resident.complaint_detail', complaint_id=c.complaint_id) }}" class="btn btn-secondary btn-sm">
+                    View Timeline <i class="fa-solid fa-arrow-right"></i>
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 48px; color: var(--text-muted);">
+        <i class="fa-solid fa-circle-check" style="font-size: 2.5rem; margin-bottom: 12px; color: #10b981;"></i>
+        <h4>No complaints found</h4>
+        <p style="font-size: 0.85rem;">Click 'Raise New Complaint' above if you need any repair or assistance.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Raise Complaint Modal -->
+<div class="modal-backdrop" id="newComplaintModal">
+  <div class="modal-box" style="max-width: 640px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-wrench" style="color: #2563eb;"></i> Raise Maintenance Complaint</h3>
+      <button class="modal-close-btn" onclick="closeModal('newComplaintModal')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('resident.complaints') }}" enctype="multipart/form-data">
+      <div class="modal-body">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Service Category</label>
+            <select name="category" class="form-select" required>
+              {% for cat in categories %}
+                <option value="{{ cat }}">{{ cat }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Urgency / Priority</label>
+            <select name="priority" class="form-select" required>
+              {% for p in priorities %}
+                <option value="{{ p }}" {% if p == 'MEDIUM' %}selected{% endif %}>{{ p }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Issue Summary / Title</label>
+          <input type="text" name="title" class="form-control" placeholder="e.g. Water leakage under kitchen sink" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Detailed Description</label>
+          <textarea name="description" class="form-control" rows="4" placeholder="Explain the issue in detail, where it is located in your flat, and when it started..." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label"><i class="fa-solid fa-paperclip"></i> Photo or Video Attachment (Stored in GridFS)</label>
+          <input type="file" name="media" class="form-control" accept="image/*,video/*">
+          <small style="color: #64748b; font-size: 0.75rem;">Supports JPG, PNG, WEBP, MP4, MOV up to 32MB.</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('newComplaintModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-paper-plane"></i> Submit Complaint
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

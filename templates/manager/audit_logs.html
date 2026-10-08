@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Activity & Audit Logs{% endblock %}
+{% block page_title %}Society System Audit Logs{% endblock %}
+{% block page_subtitle %}Immutable audit trail recording security actions, assignments, and approvals (Section 36){% endblock %}
+
+{% block content %}
+<div class="content-card">
+  <div class="card-header-bar">
+    <h3><i class="fa-solid fa-clock-rotate-left"></i> Security & Operational Audit Trail</h3>
+  </div>
+
+  <div class="card-body" style="padding: 0;">
+    {% if logs %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>Log ID</th>
+              <th>Timestamp</th>
+              <th>Actor</th>
+              <th>Role</th>
+              <th>Action Event</th>
+              <th>Target Entity</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for l in logs %}
+              <tr>
+                <td><strong>{{ l.log_id }}</strong></td>
+                <td style="font-size: 0.8rem; color: #64748b;">{{ l.timestamp | datetime_format('%b %d, %Y - %I:%M:%S %p') }}</td>
+                <td style="font-weight: 700; color: #0f172a;">{{ l.user_name }} ({{ l.user_id }})</td>
+                <td>
+                  <span class="badge-role badge-role-{{ l.role.lower() if l.role else 'resident' }}" style="font-size: 0.7rem; padding: 2px 8px;">
+                    {{ l.role }}
+                  </span>
+                </td>
+                <td>
+                  <span style="font-family: monospace; font-size: 0.8rem; font-weight: 700; color: #2563eb;">
+                    {{ l.action }}
+                  </span>
+                </td>
+                <td>
+                  <span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">
+                    {{ l.entity }}: {{ l.entity_id }}
+                  </span>
+                </td>
+                <td style="font-size: 0.82rem; color: #334155;">{{ l.details }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 48px; color: var(--text-muted);">
+        <p>No audit events recorded.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

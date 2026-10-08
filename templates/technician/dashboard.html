@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}Technician Console{% endblock %}
+{% block page_title %}Technician Work Console{% endblock %}
+{% block page_subtitle %}Welcome back, {{ tech.name }} (Specialization: {{ tech.specialization }}){% endblock %}
+
+{% block content %}
+<!-- Metric Cards Grid -->
+<div class="metrics-grid">
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>New Assignments</h4>
+      <div class="metric-value" style="color: #2563eb;">{{ new_assignments | length }}</div>
+      <div class="metric-sub">Pending work acceptance</div>
+    </div>
+    <div class="metric-icon-box box-blue">
+      <i class="fa-solid fa-clipboard-list"></i>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Active Tasks</h4>
+      <div class="metric-value" style="color: #d97706;">{{ active_tasks | length }}</div>
+      <div class="metric-sub">Currently in progress</div>
+    </div>
+    <div class="metric-icon-box box-amber">
+      <i class="fa-solid fa-person-digging"></i>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Completed Jobs</h4>
+      <div class="metric-value" style="color: #166534;">{{ tech.completed_tasks }}</div>
+      <div class="metric-sub">Successfully resolved</div>
+    </div>
+    <div class="metric-icon-box box-emerald">
+      <i class="fa-solid fa-circle-check"></i>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Resident Rating</h4>
+      <div class="metric-value" style="color: #d97706;">
+        <i class="fa-solid fa-star" style="font-size: 1.4rem;"></i> {{ tech.rating }}
+      </div>
+      <div class="metric-sub">Based on {{ tech.ratings_count }} resident ratings</div>
+    </div>
+    <div class="metric-icon-box box-indigo">
+      <i class="fa-solid fa-award"></i>
+    </div>
+  </div>
+</div>
+
+<!-- New Assignments Requiring Acceptance (Demo Scenario 1 - Steps 5 & 6) -->
+<div class="content-card" style="margin-bottom: 24px;">
+  <div class="card-header-bar">
+    <h3>
+      <i class="fa-solid fa-bell" style="color: #2563eb;"></i>
+      New Maintenance Assignments ({{ new_assignments | length }})
+    </h3>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if new_assignments %}
+      <div style="display: flex; flex-direction: column;">
+        {% for c in new_assignments %}
+          <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+            <div style="max-width: 600px;">
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                <span style="font-weight: 800; font-size: 1.05rem; color: #0f172a;">{{ c.complaint_id }} - {{ c.title }}</span>
+                <span class="badge-status badge-assigned">ASSIGNED</span>
+                <span style="font-size: 0.75rem; font-weight: 700; color: {% if c.priority in ['HIGH', 'EMERGENCY'] %}#dc2626{% else %}#2563eb{% endif %};">
+                  {{ c.priority }} Priority
+                </span>
+              </div>
+              <p style="font-size: 0.88rem; color: var(--text-main); margin-bottom: 8px;">{{ c.description }}</p>
+              <div style="font-size: 0.82rem; color: #64748b;">
+                <i class="fa-solid fa-location-dot" style="color: #2563eb;"></i> <strong>Block {{ c.block }} - Flat {{ c.flat }}</strong> • Resident: {{ c.resident_name }} ({{ c.resident_phone }})
+              </div>
+              {% if c.media %}
+                <div style="margin-top: 8px;">
+                  <a href="{{ url_for('auth.get_media', file_id=c.media[0].file_id) }}" target="_blank" class="btn btn-secondary btn-sm" style="font-size: 0.75rem;">
+                    <i class="fa-solid fa-paperclip"></i> View Proof Photo/Video (GridFS)
+                  </a>
+                </div>
+              {% endif %}
+            </div>
+
+            <!-- Start Work Action Button (Step 6) -->
+            <div>
+              <form method="POST" action="{{ url_for('technician.update_status', complaint_id=c.complaint_id) }}">
+                <input type="hidden" name="status" value="IN_PROGRESS">
+                <input type="hidden" name="notes" value="Technician accepted assignment and started on-site inspection.">
+                <button type="submit" class="btn btn-primary">
+                  <i class="fa-solid fa-play"></i> Accept & Start Work
+                </button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+        <i class="fa-solid fa-circle-check" style="font-size: 2rem; color: #10b981; margin-bottom: 8px;"></i>
+        <p style="font-size: 0.85rem;">No new pending assignments awaiting acceptance.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Active In-Progress Tasks (Demo Scenario 1 - Step 8: Mark Resolved) -->
+<div class="content-card">
+  <div class="card-header-bar">
+    <h3>
+      <i class="fa-solid fa-person-digging" style="color: #d97706;"></i>
+      Tasks Currently In-Progress ({{ active_tasks | length }})
+    </h3>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if active_tasks %}
+      <div style="display: flex; flex-direction: column;">
+        {% for c in active_tasks %}
+          <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+            <div style="max-width: 600px;">
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                <span style="font-weight: 800; font-size: 1.05rem; color: #0f172a;">{{ c.complaint_id }} - {{ c.title }}</span>
+                <span class="badge-status badge-in_progress">IN_PROGRESS</span>
+              </div>
+              <p style="font-size: 0.88rem; color: var(--text-main); margin-bottom: 8px;">{{ c.description }}</p>
+              <div style="font-size: 0.82rem; color: #64748b;">
+                <i class="fa-solid fa-location-dot" style="color: #2563eb;"></i> <strong>Block {{ c.block }} - Flat {{ c.flat }}</strong> • Resident: {{ c.resident_name }} ({{ c.resident_phone }})
+              </div>
+            </div>
+
+            <!-- Complete & Resolve Button -->
+            <div>
+              <button type="button" class="btn btn-success" onclick="openResolveModal('{{ c.complaint_id }}', '{{ c.title }}', '{{ c.flat }}')">
+                <i class="fa-solid fa-circle-check"></i> Complete & Resolve Job
+              </button>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+        <p style="font-size: 0.85rem;">No tasks currently in progress.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Work Report / Resolve Complaint Modal (Problem 6) -->
+<div class="modal-backdrop" id="resolveModal">
+  <div class="modal-box" style="max-width: 580px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-clipboard-check" style="color: #10b981;"></i> Complete Work & Submit Report</h3>
+      <button class="modal-close-btn" onclick="closeModal('resolveModal')">&times;</button>
+    </div>
+    <form method="POST" id="resolveForm" enctype="multipart/form-data">
+      <div class="modal-body">
+        <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+          <h4 id="resolveComplaintTitle" style="color: #0f172a; font-size: 0.95rem; font-weight: 700;">Complaint</h4>
+          <span id="resolveComplaintFlat" style="font-size: 0.8rem; color: #2563eb; font-weight: 600;">Flat</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Work Summary *</label>
+          <input type="text" name="work_summary" class="form-control" placeholder="e.g. Repaired lift door sensor" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Work Performed / Action Details *</label>
+          <textarea name="work_performed" class="form-control" rows="3" placeholder="e.g. Replaced damaged sensor module and recalibrated alignment..." required></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-7">
+            <label class="form-label">Parts Used (comma separated)</label>
+            <input type="text" name="parts_used" class="form-control" placeholder="e.g. Door sensor module, Wiring harness">
+          </div>
+          <div class="form-group col-5">
+            <label class="form-label">Time Spent (Mins)</label>
+            <input type="number" name="time_spent_minutes" class="form-control" value="60" min="5" step="5">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Technician Remarks</label>
+          <input type="text" name="remarks" class="form-control" placeholder="Optional notes for resident & management">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-6">
+            <label class="form-label"><i class="fa-solid fa-camera"></i> Before Image</label>
+            <input type="file" name="before_image" class="form-control" accept="image/*">
+          </div>
+          <div class="form-group col-6">
+            <label class="form-label"><i class="fa-solid fa-camera-retro"></i> After Image</label>
+            <input type="file" name="after_image" class="form-control" accept="image/*">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('resolveModal')">Cancel</button>
+        <button type="submit" class="btn btn-success">
+          <i class="fa-solid fa-paper-plane"></i> Submit Work Report
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function openResolveModal(complaintId, title, flat) {
+    document.getElementById("resolveForm").action = `/technician/tasks/${complaintId}/complete`;
+    document.getElementById("resolveComplaintTitle").innerText = `${complaintId}: ${title}`;
+    document.getElementById("resolveComplaintFlat").innerText = `Flat ${flat}`;
+    openModal("resolveModal");
+  }
+</script>
+{% endblock %}

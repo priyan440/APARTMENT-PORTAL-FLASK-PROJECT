@@ -1,0 +1,578 @@
+{% extends "base.html" %}
+
+{% block title %}Complaint Management{% endblock %}
+{% block page_title %}Service Complaints Management{% endblock %}
+{% block page_subtitle %}Review maintenance requests, inspect photos, and assign specialized technicians (Section 16 & 17){% endblock %}
+
+{% block content %}
+<div class="content-card">
+  <div class="card-header-bar">
+    <h3><i class="fa-solid fa-screwdriver-wrench"></i> All Society Complaints</h3>
+  </div>
+
+  <!-- Filters Bar -->
+  <form method="GET" action="{{ url_for('manager.complaints') }}" class="filter-bar">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Block:</label>
+      <select name="block" class="form-select" style="padding: 6px 10px; font-size: 0.82rem; width: auto;" onchange="this.form.submit()">
+        <option value="">All Blocks</option>
+        <option value="A" {% if filters.block == 'A' %}selected{% endif %}>Block A</option>
+        <option value="B" {% if filters.block == 'B' %}selected{% endif %}>Block B</option>
+        <option value="C" {% if filters.block == 'C' %}selected{% endif %}>Block C</option>
+        <option value="D" {% if filters.block == 'D' %}selected{% endif %}>Block D</option>
+      </select>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Category:</label>
+      <select name="category" class="form-select" style="padding: 6px 10px; font-size: 0.82rem; width: auto;" onchange="this.form.submit()">
+        <option value="">All Categories</option>
+        {% for cat in categories %}
+          <option value="{{ cat }}" {% if filters.category == cat %}selected{% endif %}>{{ cat }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Priority:</label>
+      <select name="priority" class="form-select" style="padding: 6px 10px; font-size: 0.82rem; width: auto;" onchange="this.form.submit()">
+        <option value="">All Priorities</option>
+        {% for p in priorities %}
+          <option value="{{ p }}" {% if filters.priority == p %}selected{% endif %}>{{ p }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Status:</label>
+      <select name="status" class="form-select" style="padding: 6px 10px; font-size: 0.82rem; width: auto;" onchange="this.form.submit()">
+        <option value="">All Statuses</option>
+        {% for s in statuses %}
+          <option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <a href="{{ url_for('manager.complaints') }}" class="btn btn-secondary btn-sm" style="margin-left: auto;">Reset Filters</a>
+  </form>
+
+  <div class="card-body" style="padding: 0;">
+    {% if complaints %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Location</th>
+              <th>Resident</th>
+              <th>Category</th>
+              <th>Title</th>
+              <th>Priority</th>
+              <th>Proof</th>
+              <th>Assigned Technician</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in complaints %}
+              <tr>
+                <td><strong>{{ c.complaint_id }}</strong></td>
+                <td>
+                  <span style="font-weight: 700; color: #1e293b;">Flat {{ c.flat }}</span>
+                  <span style="font-size: 0.72rem; color: #64748b; display: block;">Block {{ c.block }}</span>
+                </td>
+                <td>
+                  <span style="font-weight: 600;">{{ c.resident_name }}</span>
+                  <span style="font-size: 0.72rem; color: #64748b; display: block;">{{ c.resident_phone }}</span>
+                </td>
+                <td>
+                  <span style="background: #f1f5f9; padding: 3px 8px; border-radius: 4px; font-weight: 600; font-size: 0.78rem;">
+                    {{ c.category }}
+                  </span>
+                </td>
+                <td style="max-width: 220px;">
+                  <strong style="color: #0f172a;">{{ c.title }}</strong>
+                  <p style="font-size: 0.76rem; color: var(--text-muted); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                    {{ c.description }}
+                  </p>
+                </td>
+                <td>
+                  <span style="font-weight: 700; font-size: 0.75rem; color: {% if c.priority in ['HIGH', 'EMERGENCY'] %}#dc2626{% elif c.priority == 'MEDIUM' %}#d97706{% else %}#2563eb{% endif %};">
+                    {{ c.priority }}
+                  </span>
+                </td>
+                <td>
+                  {% if c.media %}
+                    <a href="{{ url_for('auth.get_media', file_id=c.media[0].file_id) }}" target="_blank" class="btn btn-secondary btn-sm" style="padding: 3px 8px; font-size: 0.75rem;" title="View Attachment">
+                      <i class="fa-solid fa-paperclip"></i> Media ({{ c.media | length }})
+                    </a>
+                  {% else %}
+                    <span style="color: #cbd5e1; font-size: 0.75rem;">None</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if c.assigned_type == 'VENDOR' or c.assigned_vendor_id %}
+                    <span style="color: #7c3aed; font-weight: 600;">
+                      <i class="fa-solid fa-truck-field"></i> Vendor: {{ c.assigned_vendor_name or c.assigned_vendor_id }}
+                    </span>
+                  {% elif c.technician_name %}
+                    <span style="color: #2563eb; font-weight: 600;">
+                      <i class="fa-solid fa-user-gear"></i> {{ c.technician_name }}
+                    </span>
+                  {% else %}
+                    <span style="color: #ef4444; font-weight: 600; font-size: 0.8rem;">
+                      <i class="fa-solid fa-circle-exclamation"></i> Unassigned
+                    </span>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="badge-status badge-{{ c.status.lower() }}">
+                    {{ c.status }}
+                  </span>
+                </td>
+                <td>
+                  <button type="button" class="btn btn-primary btn-sm" onclick="openAssignModal('{{ c.complaint_id }}', '{{ c.title }}', '{{ c.category }}', '{{ c.priority }}', '{{ c.technician_id or '' }}')">
+                    <i class="fa-solid fa-user-plus"></i> {% if c.technician_id or c.assigned_vendor_id %}Reassign{% else %}Assign{% endif %}
+                  </button>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 48px; color: var(--text-muted);">
+        <i class="fa-solid fa-circle-check" style="font-size: 2.5rem; color: #10b981; margin-bottom: 12px;"></i>
+        <h4>No complaints matching criteria</h4>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Completed Work Reports Section -->
+<div class="content-card" style="margin-top: 24px;">
+  <div class="card-header-bar" style="border-bottom: 1px solid var(--border-light); padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;">
+    <h3 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 0;">
+      <i class="fa-solid fa-clipboard-check" style="color: #10b981;"></i> Completed Work Reports & Reviews
+    </h3>
+    <span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700; padding: 4px 10px; border-radius: 9999px; font-size: 0.78rem;">
+      {{ work_reports|length }} Reports
+    </span>
+  </div>
+
+  <div class="card-body" style="padding: 0;">
+    {% if work_reports %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>Report ID</th>
+              <th>Complaint</th>
+              <th>Technician / Vendor</th>
+              <th>Work Summary</th>
+              <th>Parts Used</th>
+              <th>Images</th>
+              <th>Date</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in work_reports %}
+              <tr>
+                <td><strong>{{ r.report_id }}</strong></td>
+                <td>
+                  <strong style="color: #1e293b;">{{ r.complaint_id }}</strong>
+                  <span style="font-size: 0.72rem; color: #64748b; display: block;">{{ r.complaint_title or '' }}</span>
+                  <span style="font-size: 0.72rem; color: #0284c7; display: block;">Flat {{ r.flat }} (Block {{ r.block }})</span>
+                </td>
+                <td>
+                  <span style="font-weight: 600; color: #2563eb;">{{ r.technician_name or r.technician_id }}</span>
+                  {% if r.vendor_id %}
+                    <span style="font-size: 0.72rem; color: #7c3aed; display: block;">Vendor: {{ r.vendor_id }}</span>
+                  {% endif %}
+                </td>
+                <td style="max-width: 200px;">
+                  <strong style="color: #0f172a; font-size: 0.85rem;">{{ r.work.summary if r.work else '' }}</strong>
+                  <p style="font-size: 0.76rem; color: #64748b; margin: 2px 0 0 0; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                    {{ r.work.details if r.work else '' }}
+                  </p>
+                </td>
+                <td>
+                  {% if r.work and r.work.parts_used %}
+                    {% for p in r.work.parts_used %}
+                      <span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; display: inline-block; margin-bottom: 2px;">{{ p }}</span>
+                    {% endfor %}
+                  {% else %}
+                    <span style="color: #94a3b8; font-size: 0.75rem;">None</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div style="display: flex; gap: 4px;">
+                    {% if r.media and r.media.before_image_id %}
+                      <a href="{{ url_for('auth.get_media', file_id=r.media.before_image_id) }}" target="_blank" class="btn btn-secondary btn-sm" style="padding: 2px 6px; font-size: 0.7rem;" title="Before Image">
+                        <i class="fa-solid fa-image"></i> Before
+                      </a>
+                    {% endif %}
+                    {% if r.media and r.media.after_image_id %}
+                      <a href="{{ url_for('auth.get_media', file_id=r.media.after_image_id) }}" target="_blank" class="btn btn-secondary btn-sm" style="padding: 2px 6px; font-size: 0.7rem;" title="After Image">
+                        <i class="fa-solid fa-image"></i> After
+                      </a>
+                    {% endif %}
+                    {% if not (r.media and (r.media.before_image_id or r.media.after_image_id)) %}
+                      <span style="color: #cbd5e1; font-size: 0.75rem;">No media</span>
+                    {% endif %}
+                  </div>
+                </td>
+                <td>
+                  <span style="font-size: 0.8rem; color: #475569;">{{ r.completion_date or r.submitted_at[:10] }}</span>
+                </td>
+                <td>
+                  <span class="badge-status {% if r.status == 'APPROVED' %}badge-resolved{% elif r.status == 'REOPENED' %}badge-open{% else %}badge-in_progress{% endif %}">
+                    {{ r.status }}
+                  </span>
+                </td>
+                <td>
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-secondary btn-sm" style="padding: 3px 8px; font-size: 0.75rem;" onclick="viewWorkReportDetails('{{ r.report_id }}', '{{ r.complaint_id }}', '{{ r.technician_name or r.technician_id }}', '{{ (r.work.summary if r.work else '')|replace(\"'\", \"\\'\") }}', '{{ (r.work.details if r.work else '')|replace(\"'\", \"\\'\") }}', '{{ (r.work.parts_used if r.work else [])|join(', ') }}', '{{ (r.work.remarks if r.work else '')|replace(\"'\", \"\\'\") }}', '{{ r.media.before_image_id if r.media else '' }}', '{{ r.media.after_image_id if r.media else '' }}', '{{ r.status }}')">
+                      <i class="fa-solid fa-eye"></i> View
+                    </button>
+                    {% if r.status != 'APPROVED' %}
+                      <form method="POST" action="{{ url_for('manager.approve_complaint_work', complaint_id=r.complaint_id) }}" style="display: inline;">
+                        <button type="submit" class="btn btn-primary btn-sm" style="background: #10b981; border-color: #10b981; padding: 3px 8px; font-size: 0.75rem;">
+                          <i class="fa-solid fa-check"></i> Approve
+                        </button>
+                      </form>
+                      <button type="button" class="btn btn-secondary btn-sm" style="color: #dc2626; border-color: #fca5a5; padding: 3px 8px; font-size: 0.75rem;" onclick="openReopenModal('{{ r.complaint_id }}')">
+                        <i class="fa-solid fa-rotate-left"></i> Reopen
+                      </button>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 32px; color: var(--text-muted);">
+        <i class="fa-solid fa-file-signature" style="font-size: 2rem; color: #94a3b8; margin-bottom: 8px;"></i>
+        <p style="margin: 0; font-size: 0.9rem;">No technician work reports submitted yet.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Dispatch Modal: In-House Technician vs External Vendor -->
+<div class="modal-backdrop" id="assignModal">
+  <div class="modal-box" style="max-width: 600px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-wrench" style="color: #2563eb;"></i> Dispatch Resolution Service</h3>
+      <button class="modal-close-btn" onclick="closeModal('assignModal')">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+        <div style="font-size: 0.8rem; color: #64748b;">Complaint:</div>
+        <h4 id="assignModalTitle" style="color: #0f172a; font-size: 0.95rem; font-weight: 700; margin: 2px 0;">Title</h4>
+        <div style="margin-top: 4px; font-size: 0.8rem;">
+          Category: <strong id="assignModalCat" style="color: #2563eb;">Cat</strong> | 
+          Priority: <strong id="assignModalPriority" style="color: #dc2626;">Pri</strong>
+        </div>
+      </div>
+
+      <!-- Assignment Type Switcher -->
+      <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+        <button type="button" id="btnAssignTech" class="btn btn-primary btn-sm" style="flex: 1;" onclick="setAssignMode('TECH')">
+          <i class="fa-solid fa-user-gear"></i> In-House Technician
+        </button>
+        <button type="button" id="btnAssignVendor" class="btn btn-secondary btn-sm" style="flex: 1;" onclick="setAssignMode('VENDOR')">
+          <i class="fa-solid fa-truck-field"></i> External AMC Vendor
+        </button>
+      </div>
+
+      <!-- Form 1: Technician Assignment -->
+      <form method="POST" id="assignForm">
+        <div id="techAssignSection">
+          <div class="form-group">
+            <label class="form-label">Select Technician</label>
+            <div style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto;">
+              {% for t in technicians %}
+                <label class="tech-select-option" style="border: 1px solid var(--border-light); padding: 10px 14px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: 0.15s; background: #fff;" onclick="selectTech(this)">
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <input type="radio" name="technician_id" value="{{ t.user_id }}">
+                    <div>
+                      <strong style="color: #0f172a; font-size: 0.9rem;">{{ t.name }}</strong>
+                      <span style="font-size: 0.78rem; color: #2563eb; display: block; font-weight: 600;">
+                        Specialization: {{ t.specialization }}
+                      </span>
+                    </div>
+                  </div>
+                  <div style="text-align: right;">
+                    <span style="font-size: 0.78rem; font-weight: 700; color: #475569; display: block;">
+                      Active Jobs: {{ t.active_tasks }}
+                    </span>
+                    <span style="font-size: 0.72rem; color: #f59e0b; font-weight: 700;">
+                      <i class="fa-solid fa-star"></i> {{ t.rating }}
+                    </span>
+                  </div>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Adjust Priority (Optional)</label>
+            <select name="priority" id="assignPrioritySelect" class="form-select">
+              {% for p in priorities %}
+                <option value="{{ p }}">{{ p }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="modal-footer" style="padding: 16px 0 0 0; margin-top: 16px; border-top: 1px solid #e2e8f0;">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('assignModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">
+              <i class="fa-solid fa-paper-plane"></i> Assign Technician
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Form 2: Vendor Assignment -->
+      <form method="POST" id="vendorAssignForm" style="display: none;">
+        <div id="vendorAssignSection">
+          <div class="form-group">
+            <label class="form-label">Select Registered Vendor *</label>
+            <select name="vendor_id" id="vendorSelect" class="form-select" required>
+              <option value="">-- Choose Active Contractor / Vendor --</option>
+              {% for v in vendors %}
+                <option value="{{ v.vendor_id }}">
+                  {{ v.company.name }} ({{ v.service.category|replace('_', ' ') }}) - Contact: {{ v.company.contact_person }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Vendor Service Description / Work Order Notes</label>
+            <textarea name="description" id="vendorDescription" class="form-control" rows="2" placeholder="Describe repair/AMC work required..."></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label class="form-label">Priority</label>
+              <select name="priority" id="vendorPrioritySelect" class="form-select">
+                {% for p in priorities %}
+                  <option value="{{ p }}">{{ p }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group col-6">
+              <label class="form-label">Scheduled Date</label>
+              <input type="date" name="scheduled_date" class="form-control">
+            </div>
+          </div>
+
+          <div class="modal-footer" style="padding: 16px 0 0 0; margin-top: 16px; border-top: 1px solid #e2e8f0;">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('assignModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary" style="background-color: #7c3aed; border-color: #7c3aed;">
+              <i class="fa-solid fa-truck-fast"></i> Assign & Dispatch Vendor
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- View Work Report Modal -->
+<div class="modal-backdrop" id="viewReportModal">
+  <div class="modal-box" style="max-width: 600px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-clipboard-list" style="color: #10b981;"></i> Service Work Report</h3>
+      <button class="modal-close-btn" onclick="closeModal('viewReportModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <strong id="modalReportId" style="color: #0f172a; font-size: 1rem;">WR001</strong>
+          <span id="modalReportStatus" class="badge-status badge-resolved">SUBMITTED</span>
+        </div>
+        <div style="font-size: 0.85rem; color: #475569;">
+          Complaint Ref: <strong id="modalReportComplaintId" style="color: #2563eb;">CMP001</strong> | 
+          Technician: <strong id="modalReportTech">TECH001</strong>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" style="font-size: 0.8rem; text-transform: uppercase; color: #64748b;">Work Summary</label>
+        <div id="modalReportSummary" style="font-weight: 600; color: #0f172a; background: #fff; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px;"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" style="font-size: 0.8rem; text-transform: uppercase; color: #64748b;">Work Details / Actions Performed</label>
+        <div id="modalReportDetails" style="font-size: 0.85rem; color: #334155; background: #fff; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; white-space: pre-wrap;"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" style="font-size: 0.8rem; text-transform: uppercase; color: #64748b;">Parts Used</label>
+        <div id="modalReportParts" style="font-size: 0.85rem; color: #334155; background: #fff; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px;">None</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" style="font-size: 0.8rem; text-transform: uppercase; color: #64748b;">Remarks</label>
+        <div id="modalReportRemarks" style="font-size: 0.85rem; color: #475569; background: #fff; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px;">None</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" style="font-size: 0.8rem; text-transform: uppercase; color: #64748b;">Inspection Photos</label>
+        <div id="modalReportImages" style="display: flex; gap: 12px; margin-top: 6px;">
+          <!-- dynamic image links -->
+        </div>
+      </div>
+
+      <div class="modal-footer" style="padding: 14px 0 0 0; margin-top: 16px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('viewReportModal')">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reopen Complaint Modal -->
+<div class="modal-backdrop" id="reopenModal">
+  <div class="modal-box" style="max-width: 500px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-rotate-left" style="color: #dc2626;"></i> Reopen Complaint</h3>
+      <button class="modal-close-btn" onclick="closeModal('reopenModal')">&times;</button>
+    </div>
+    <form method="POST" id="reopenForm">
+      <div class="modal-body">
+        <p style="font-size: 0.88rem; color: #475569; margin-bottom: 12px;">
+          Please provide reasons or specific instructions for reopening this complaint. The assigned technician will be notified.
+        </p>
+        <div class="form-group">
+          <label class="form-label">Manager Reopen Notes *</label>
+          <textarea name="notes" class="form-control" rows="3" placeholder="e.g. Issue recurred, resident reported incomplete fix..." required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('reopenModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="background: #dc2626; border-color: #dc2626;">
+          <i class="fa-solid fa-rotate-left"></i> Confirm Reopen
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let currentComplaintId = null;
+
+  function openAssignModal(complaintId, title, category, priority, currentTechId) {
+    currentComplaintId = complaintId;
+    document.getElementById("assignForm").action = `/manager/complaints/${complaintId}/assign`;
+    document.getElementById("vendorAssignForm").action = `/manager/complaints/${complaintId}/assign-vendor`;
+    document.getElementById("assignModalTitle").innerText = `${complaintId}: ${title}`;
+    document.getElementById("assignModalCat").innerText = category;
+    document.getElementById("assignModalPriority").innerText = priority;
+    document.getElementById("assignPrioritySelect").value = priority;
+    document.getElementById("vendorPrioritySelect").value = priority;
+    document.getElementById("vendorDescription").value = `Resolution for complaint ${complaintId}: ${title}`;
+
+    setAssignMode('TECH');
+
+    // Highlight technician matching category
+    document.querySelectorAll(".tech-select-option").forEach(el => {
+      const isMatch = el.innerText.toLowerCase().includes(category.toLowerCase());
+      if (isMatch) {
+        el.style.borderColor = "#3b82f6";
+        el.style.backgroundColor = "#eff6ff";
+      } else {
+        el.style.borderColor = "#e2e8f0";
+        el.style.backgroundColor = "#ffffff";
+      }
+    });
+
+    openModal("assignModal");
+  }
+
+  function setAssignMode(mode) {
+    const techBtn = document.getElementById('btnAssignTech');
+    const vendorBtn = document.getElementById('btnAssignVendor');
+    const techForm = document.getElementById('assignForm');
+    const vendorForm = document.getElementById('vendorAssignForm');
+
+    if (mode === 'TECH') {
+      techBtn.className = 'btn btn-primary btn-sm';
+      vendorBtn.className = 'btn btn-secondary btn-sm';
+      techForm.style.display = 'block';
+      vendorForm.style.display = 'none';
+      const firstRadio = techForm.querySelector("input[type='radio']");
+      if (firstRadio) firstRadio.required = true;
+    } else {
+      techBtn.className = 'btn btn-secondary btn-sm';
+      vendorBtn.className = 'btn btn-primary btn-sm';
+      vendorBtn.style.backgroundColor = '#7c3aed';
+      vendorBtn.style.borderColor = '#7c3aed';
+      techForm.style.display = 'none';
+      vendorForm.style.display = 'block';
+      const firstRadio = techForm.querySelector("input[type='radio']");
+      if (firstRadio) firstRadio.required = false;
+    }
+  }
+
+  function selectTech(el) {
+    el.querySelector("input[type='radio']").checked = true;
+  }
+
+  function viewWorkReportDetails(reportId, complaintId, techName, summary, details, parts, remarks, beforeId, afterId, status) {
+    document.getElementById("modalReportId").innerText = reportId;
+    document.getElementById("modalReportStatus").innerText = status;
+    document.getElementById("modalReportComplaintId").innerText = complaintId;
+    document.getElementById("modalReportTech").innerText = techName;
+    document.getElementById("modalReportSummary").innerText = summary || 'No summary provided';
+    document.getElementById("modalReportDetails").innerText = details || 'No details provided';
+    document.getElementById("modalReportParts").innerText = parts || 'None';
+    document.getElementById("modalReportRemarks").innerText = remarks || 'None';
+
+    const imgContainer = document.getElementById("modalReportImages");
+    imgContainer.innerHTML = '';
+    let hasImages = false;
+
+    if (beforeId) {
+      hasImages = true;
+      const bLink = document.createElement('a');
+      bLink.href = `/media/${beforeId}`;
+      bLink.target = '_blank';
+      bLink.className = 'btn btn-secondary btn-sm';
+      bLink.innerHTML = '<i class="fa-solid fa-image"></i> View Before Photo';
+      imgContainer.appendChild(bLink);
+    }
+    if (afterId) {
+      hasImages = true;
+      const aLink = document.createElement('a');
+      aLink.href = `/media/${afterId}`;
+      aLink.target = '_blank';
+      aLink.className = 'btn btn-secondary btn-sm';
+      aLink.innerHTML = '<i class="fa-solid fa-image"></i> View After Photo';
+      imgContainer.appendChild(aLink);
+    }
+    if (!hasImages) {
+      imgContainer.innerHTML = '<span style="color: #94a3b8; font-size: 0.85rem;">No inspection images attached</span>';
+    }
+
+    openModal("viewReportModal");
+  }
+
+  function openReopenModal(complaintId) {
+    document.getElementById("reopenForm").action = `/manager/complaints/${complaintId}/reopen`;
+    openModal("reopenModal");
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Amenities{% endblock %}
+{% block page_title %}Amenity Facilities Configuration{% endblock %}
+{% block page_subtitle %}Configure operating hours, duration limits, and manager approval policies (Section 9){% endblock %}
+
+{% block content %}
+<div class="content-card">
+  <div class="card-header-bar">
+    <h3><i class="fa-solid fa-cubes"></i> Society Amenities</h3>
+    <button type="button" class="btn btn-primary btn-sm" onclick="openModal('createAmenityModal')">
+      <i class="fa-solid fa-plus"></i> Add New Amenity
+    </button>
+  </div>
+
+  <div class="card-body" style="padding: 0;">
+    <div class="table-responsive">
+      <table class="portal-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Operating Hours Policy</th>
+            <th>Capacity</th>
+            <th>Max Duration</th>
+            <th>Approval Policy</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in amenities %}
+            <tr>
+              <td><strong>{{ a.amenity_id }}</strong></td>
+              <td style="font-weight: 700; color: #0f172a;">
+                <i class="fa-solid {{ a.icon or 'fa-building' }}" style="color: #2563eb; margin-right: 6px;"></i>
+                {{ a.name }}
+              </td>
+              <td>
+                {% if a.operating_hours.type == 'FIXED' %}
+                  <span style="background: #fef3c7; color: #b45309; padding: 3px 8px; border-radius: 4px; font-weight: 700; font-size: 0.78rem;">
+                    {{ a.operating_hours.open }} to {{ a.operating_hours.close }}
+                  </span>
+                {% else %}
+                  <span style="background: #ecfdf5; color: #166534; padding: 3px 8px; border-radius: 4px; font-weight: 700; font-size: 0.78rem;">
+                    24 Hours Open
+                  </span>
+                {% endif %}
+              </td>
+              <td>{{ a.capacity }} People</td>
+              <td>{{ a.max_duration_hours }} Hours</td>
+              <td>
+                {% if a.requires_approval %}
+                  <span style="color: #d97706; font-weight: 600; font-size: 0.8rem;">Manager Approval Required</span>
+                {% else %}
+                  <span style="color: #10b981; font-weight: 600; font-size: 0.8rem;">Auto-Confirm</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge-status {% if a.is_active %}badge-approved{% else %}badge-rejected{% endif %}">
+                  {{ 'Active' if a.is_active else 'Maintenance' }}
+                </span>
+              </td>
+              <td>
+                <form method="POST" action="{{ url_for('manager.manage_amenities') }}" style="display:inline;">
+                  <input type="hidden" name="action" value="toggle_status">
+                  <input type="hidden" name="amenity_id" value="{{ a.amenity_id }}">
+                  <button type="submit" class="btn btn-secondary btn-sm">
+                    {{ 'Deactivate' if a.is_active else 'Activate' }}
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Create Amenity Modal -->
+<div class="modal-backdrop" id="createAmenityModal">
+  <div class="modal-box" style="max-width: 600px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-plus-circle" style="color: #2563eb;"></i> Configure New Facility</h3>
+      <button class="modal-close-btn" onclick="closeModal('createAmenityModal')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('manager.manage_amenities') }}">
+      <div class="modal-body">
+        <input type="hidden" name="action" value="create">
+
+        <div class="form-group">
+          <label class="form-label">Amenity Name</label>
+          <input type="text" name="name" class="form-control" placeholder="e.g. Squash Court" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea name="description" class="form-control" rows="2" placeholder="Facility description and highlights..." required></textarea>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Operating Hours Policy</label>
+            <select name="op_type" id="opTypeSelect" class="form-select" onchange="toggleHoursInput()">
+              <option value="24_HOURS">24 Hours Open</option>
+              <option value="FIXED">Fixed Timed Hours (e.g. 10:00 - 18:00)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Max Booking Duration</label>
+            <input type="number" name="max_duration_hours" class="form-control" value="4" min="1" max="12" required>
+          </div>
+        </div>
+
+        <div id="fixedHoursFields" class="form-grid-2" style="display: none; background: #f8fafc; padding: 12px; border-radius: 6px; margin-bottom: 14px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Opens At</label>
+            <input type="time" name="open_time" class="form-control" value="10:00">
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Closes At</label>
+            <input type="time" name="close_time" class="form-control" value="18:00">
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Capacity (Persons)</label>
+            <input type="number" name="capacity" class="form-control" value="30" min="1" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">FontAwesome Icon Class</label>
+            <input type="text" name="icon" class="form-control" value="fa-building">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem;">
+            <input type="checkbox" name="requires_approval" checked>
+            <strong>Require Manager Approval for Slots</strong>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">House Rules</label>
+          <input type="text" name="rules" class="form-control" placeholder="Specific dress code, guest limits, cleanliness...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('createAmenityModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Amenity</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function toggleHoursInput() {
+    const val = document.getElementById("opTypeSelect").value;
+    const box = document.getElementById("fixedHoursFields");
+    box.style.display = (val === 'FIXED') ? 'grid' : 'none';
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Parcel Deliveries{% endblock %}
+{% block page_title %}Gate Deliveries & Couriers{% endblock %}
+{% block page_subtitle %}Log incoming courier parcels and notify residents automatically (Section 27){% endblock %}
+
+{% block content %}
+<div class="content-card">
+  <div class="card-header-bar">
+    <h3><i class="fa-solid fa-box-open"></i> Gate Parcel Ledger</h3>
+    <button type="button" class="btn btn-primary btn-sm" onclick="openModal('recordDeliveryModal')">
+      <i class="fa-solid fa-plus"></i> Record Incoming Parcel
+    </button>
+  </div>
+
+  <div class="card-body" style="padding: 0;">
+    {% if deliveries %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>Delivery ID</th>
+              <th>Courier Company</th>
+              <th>Destination Flat</th>
+              <th>Recipient</th>
+              <th>Package Details</th>
+              <th>Arrival Time</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in deliveries %}
+              <tr>
+                <td><strong>{{ d.delivery_id }}</strong></td>
+                <td>
+                  <strong style="color: #2563eb;">{{ d.company }}</strong>
+                  {% if d.delivery_person %}<span style="font-size: 0.72rem; color: #64748b; display: block;">Agent: {{ d.delivery_person }}</span>{% endif %}
+                </td>
+                <td>
+                  <strong>Flat {{ d.flat }}</strong>
+                  <span style="font-size: 0.72rem; color: #64748b; display: block;">Block {{ d.block }}</span>
+                </td>
+                <td>{{ d.resident_name }}</td>
+                <td>{{ d.parcel_details }}</td>
+                <td style="font-size: 0.8rem; color: #64748b;">{{ d.arrival_time | datetime_format }}</td>
+                <td>
+                  <span class="badge-status {% if d.status == 'RECEIVED' %}badge-open{% else %}badge-approved{% endif %}">
+                    {{ d.status }}
+                  </span>
+                </td>
+                <td>
+                  {% if d.status == 'RECEIVED' %}
+                    <form method="POST" action="{{ url_for('security.deliveries') }}" style="display:inline;">
+                      <input type="hidden" name="action" value="mark_collected">
+                      <input type="hidden" name="delivery_id" value="{{ d.delivery_id }}">
+                      <button type="submit" class="btn btn-success btn-sm">Mark Handed Over</button>
+                    </form>
+                  {% else %}
+                    <span style="font-size: 0.78rem; color: #166534; font-weight: 600;">Handed Over</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 48px; color: var(--text-muted);">
+        <p>No parcel records found.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Record Delivery Modal -->
+<div class="modal-backdrop" id="recordDeliveryModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-box" style="color: #2563eb;"></i> Log Courier Arrival</h3>
+      <button class="modal-close-btn" onclick="closeModal('recordDeliveryModal')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('security.deliveries') }}">
+      <div class="modal-body">
+        <input type="hidden" name="action" value="record">
+
+        <div class="form-group">
+          <label class="form-label">Destination Flat</label>
+          <select name="flat" class="form-select" required>
+            <option value="">-- Choose Flat --</option>
+            {% for f in occupied_flats %}
+              <option value="{{ f.flat_number }}">Flat {{ f.flat_number }} ({{ f.resident_name }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Delivery Provider</label>
+            <input type="text" name="company" class="form-control" placeholder="Amazon, Flipkart, Swiggy, BlueDart..." required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Delivery Agent Name (Optional)</label>
+            <input type="text" name="delivery_person" class="form-control" placeholder="Agent Name">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Package Description / Tracking Label</label>
+          <input type="text" name="parcel_details" class="form-control" placeholder="e.g. Cardboard box #8821, Grocery bag..." required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('recordDeliveryModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Log & Alert Resident</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Society Announcements{% endblock %}
+{% block page_title %}Society Bulletins & Notices{% endblock %}
+{% block page_subtitle %}Official updates broadcast by building management and residents association{% endblock %}
+
+{% block content %}
+<div style="max-width: 850px; margin: 0 auto;">
+  {% if announcements %}
+    {% for a in announcements %}
+      <div class="content-card" style="margin-bottom: 20px;">
+        <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; padding: 3px 8px; border-radius: 4px;
+              background-color: {% if a.priority == 'HIGH' %}#fee2e2; color: #dc2626;{% else %}#eff6ff; color: #2563eb;{% endif %}">
+              {{ a.priority }} Priority
+            </span>
+            <span style="font-size: 0.75rem; color: #64748b; margin-left: 8px;">
+              Target: <strong>{{ a.target }}</strong>
+            </span>
+          </div>
+          <span style="font-size: 0.8rem; color: #64748b;">
+            <i class="fa-regular fa-calendar"></i> {{ a.publish_date }}
+          </span>
+        </div>
+        <div class="card-body">
+          <h3 style="font-size: 1.15rem; font-weight: 700; color: #0f172a; margin-bottom: 10px;">{{ a.title }}</h3>
+          <p style="font-size: 0.92rem; color: #334155; line-height: 1.6; white-space: pre-line;">{{ a.description }}</p>
+          <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #f1f5f9; font-size: 0.78rem; color: #94a3b8;">
+            Issued by: <strong>{{ a.published_by }}</strong>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="content-card">
+      <div class="card-body" style="text-align: center; padding: 48px; color: var(--text-muted);">
+        <i class="fa-solid fa-bullhorn" style="font-size: 2.5rem; color: #cbd5e1; margin-bottom: 12px;"></i>
+        <h4>No announcements at this time</h4>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

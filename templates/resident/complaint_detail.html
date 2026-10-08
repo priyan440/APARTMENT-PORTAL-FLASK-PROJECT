@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Complaint {{ complaint.complaint_id }}{% endblock %}
+{% block page_title %}Complaint Details: {{ complaint.complaint_id }}{% endblock %}
+{% block page_subtitle %}Live status tracker, technician updates, and service history{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 18px;">
+  <a href="{{ url_for('resident.complaints') }}" class="btn btn-secondary btn-sm">
+    <i class="fa-solid fa-arrow-left"></i> Back to Complaints List
+  </a>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+  <!-- Left Column: Details, Media & Resolution -->
+  <div>
+    <!-- Issue Overview Card -->
+    <div class="content-card">
+      <div class="card-header-bar">
+        <h3>
+          <i class="fa-solid fa-file-circle-check"></i>
+          {{ complaint.title }}
+        </h3>
+        <span class="badge-status badge-{{ complaint.status.lower() }}">
+          {{ complaint.status }}
+        </span>
+      </div>
+      <div class="card-body">
+        <div style="display: flex; gap: 24px; margin-bottom: 20px; flex-wrap: wrap; background: #f8fafc; padding: 14px; border-radius: var(--radius-md);">
+          <div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Category</span>
+            <span style="font-weight: 600;">{{ complaint.category }}</span>
+          </div>
+          <div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Priority</span>
+            <span style="font-weight: 700; color: {% if complaint.priority in ['HIGH', 'EMERGENCY'] %}#dc2626{% else %}#2563eb{% endif %};">{{ complaint.priority }}</span>
+          </div>
+          <div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Reported On</span>
+            <span style="font-weight: 600;">{{ complaint.created_at | datetime_format }}</span>
+          </div>
+          <div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Location</span>
+            <span style="font-weight: 600;">Block {{ complaint.block }} - Flat {{ complaint.flat }}</span>
+          </div>
+        </div>
+
+        <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 8px;">Description</h4>
+        <p style="color: var(--text-main); font-size: 0.92rem; line-height: 1.6; margin-bottom: 20px; white-space: pre-line;">
+          {{ complaint.description }}
+        </p>
+
+        <!-- Media Attachment (GridFS) -->
+        {% if complaint.media %}
+          <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 10px;">
+            <i class="fa-solid fa-paperclip"></i> Attached Proof (Stored in GridFS)
+          </h4>
+          <div style="display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 24px;">
+            {% for m in complaint.media %}
+              {% if m.type == 'image' %}
+                <div style="border: 1px solid var(--border-light); border-radius: 8px; overflow: hidden; max-width: 320px;">
+                  <img src="{{ url_for('auth.get_media', file_id=m.file_id) }}" alt="{{ m.filename }}" style="width: 100%; height: auto; display: block;">
+                  <div style="padding: 6px 10px; font-size: 0.75rem; color: var(--text-muted); background: #f8fafc;">
+                    {{ m.filename }}
+                  </div>
+                </div>
+              {% elif m.type == 'video' %}
+                <div style="border: 1px solid var(--border-light); border-radius: 8px; overflow: hidden; max-width: 380px;">
+                  <video controls style="width: 100%; display: block;">
+                    <source src="{{ url_for('auth.get_media', file_id=m.file_id) }}" type="{{ m.content_type }}">
+                    Your browser does not support HTML5 video.
+                  </video>
+                  <div style="padding: 6px 10px; font-size: 0.75rem; color: var(--text-muted); background: #f8fafc;">
+                    {{ m.filename }}
+                  </div>
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <!-- Resolution Notes & Completion Photo -->
+        {% if complaint.status in ['RESOLVED', 'CLOSED'] %}
+          <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: var(--radius-md); padding: 18px; margin-top: 20px;">
+            <h4 style="color: #065f46; font-size: 0.95rem; font-weight: 700; margin-bottom: 6px;">
+              <i class="fa-solid fa-circle-check"></i> Technician Resolution Notes
+            </h4>
+            <p style="color: #047857; font-size: 0.9rem; line-height: 1.5; margin-bottom: 12px;">
+              {{ complaint.resolution_notes or 'Service completed successfully by technician.' }}
+            </p>
+            {% if complaint.resolution_media %}
+              <div style="margin-top: 10px;">
+                <span style="font-size: 0.75rem; font-weight: 700; color: #065f46; text-transform: uppercase;">Completion Photo:</span>
+                <div style="margin-top: 6px; max-width: 280px; border-radius: 6px; overflow: hidden; border: 1px solid #a7f3d0;">
+                  <img src="{{ url_for('auth.get_media', file_id=complaint.resolution_media[0].file_id) }}" alt="Resolution" style="width: 100%;">
+                </div>
+              </div>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        <!-- Service Rating Widget (Demo Scenario 1 - Step 10) -->
+        {% if complaint.status == 'RESOLVED' %}
+          <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: var(--radius-md); padding: 20px; margin-top: 24px;">
+            <h4 style="color: #92400e; font-size: 1.05rem; font-weight: 700; margin-bottom: 6px;">
+              <i class="fa-solid fa-star" style="color: #f59e0b;"></i> Rate Service Resolution
+            </h4>
+            <p style="color: #b45309; font-size: 0.85rem; margin-bottom: 14px;">
+              Please rate the work completed by technician {{ complaint.technician_name }}.
+            </p>
+            <form method="POST" action="{{ url_for('resident.rate_complaint', complaint_id=complaint.complaint_id) }}">
+              <div class="star-rating-widget" style="margin-bottom: 14px;">
+                <input type="hidden" name="rating" value="5">
+                <span style="font-size: 1.7rem; cursor: pointer; color: #f59e0b;">
+                  <i class="fas fa-star star-icon" data-val="1"></i>
+                  <i class="fas fa-star star-icon" data-val="2"></i>
+                  <i class="fas fa-star star-icon" data-val="3"></i>
+                  <i class="fas fa-star star-icon" data-val="4"></i>
+                  <i class="fas fa-star star-icon" data-val="5"></i>
+                </span>
+                <span style="font-size: 0.85rem; font-weight: 600; color: #92400e; margin-left: 10px;">(5 / 5 Excellent)</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="color: #92400e;">Feedback Remarks</label>
+                <textarea name="feedback" class="form-control" rows="2" placeholder="Write a short review about the service quality..."></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-check"></i> Submit Rating & Close Complaint
+              </button>
+            </form>
+          </div>
+        {% elif complaint.rating %}
+          <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 16px; margin-top: 20px;">
+            <span style="font-size: 0.78rem; text-transform: uppercase; font-weight: 700; color: #64748b;">Your Rating & Feedback</span>
+            <div style="color: #f59e0b; font-size: 1.1rem; margin: 4px 0;">
+              {% for i in range(complaint.rating) %}
+                <i class="fas fa-star"></i>
+              {% endfor %}
+              <span style="font-size: 0.85rem; font-weight: 700; color: #1e293b; margin-left: 6px;">{{ complaint.rating }} / 5 Stars</span>
+            </div>
+            {% if complaint.feedback %}
+              <p style="font-size: 0.85rem; color: #475569; font-style: italic;">"{{ complaint.feedback }}"</p>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Assigned Technician & Status Timeline -->
+  <div>
+    <!-- Assigned Technician Card -->
+    <div class="content-card" style="margin-bottom: 24px;">
+      <div class="card-header-bar">
+        <h3><i class="fa-solid fa-user-gear"></i> Assigned Technician</h3>
+      </div>
+      <div class="card-body">
+        {% if complaint.technician_name %}
+          <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 12px;">
+            <div style="width: 44px; height: 44px; border-radius: 50%; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+              <i class="fa-solid fa-wrench"></i>
+            </div>
+            <div>
+              <h4 style="font-size: 0.95rem; font-weight: 700;">{{ complaint.technician_name }}</h4>
+              <p style="font-size: 0.8rem; color: var(--text-muted);">{{ complaint.category }} Specialist</p>
+            </div>
+          </div>
+          <div style="font-size: 0.82rem; color: var(--text-muted); background: #f8fafc; padding: 10px; border-radius: 6px;">
+            <i class="fa-solid fa-shield-halved" style="color: #10b981;"></i> Verified Staff ID: <strong>{{ complaint.technician_id }}</strong>
+          </div>
+        {% else %}
+          <div style="text-align: center; padding: 20px; color: var(--text-muted);">
+            <i class="fa-solid fa-user-clock" style="font-size: 1.8rem; color: #cbd5e1; margin-bottom: 6px;"></i>
+            <p style="font-size: 0.85rem;">Pending assignment by Apartment Manager.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Status History Timeline (Section 20) -->
+    <div class="content-card">
+      <div class="card-header-bar">
+        <h3><i class="fa-solid fa-clock-rotate-left"></i> Status History</h3>
+      </div>
+      <div class="card-body">
+        <div class="timeline">
+          {% for item in complaint.status_history %}
+            <div class="timeline-item">
+              <div class="timeline-dot"></div>
+              <div class="timeline-content">
+                <div class="timeline-meta">
+                  <span class="timeline-status">{{ item.status }}</span>
+                  <span class="timeline-time">{{ item.timestamp | datetime_format('%b %d, %I:%M %p') }}</span>
+                </div>
+                <div class="timeline-actor">
+                  By <strong>{{ item.changed_by_name or item.changed_by }}</strong> ({{ item.role }})
+                </div>
+                {% if item.notes %}
+                  <p style="font-size: 0.78rem; color: #475569; margin-top: 4px;">{{ item.notes }}</p>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

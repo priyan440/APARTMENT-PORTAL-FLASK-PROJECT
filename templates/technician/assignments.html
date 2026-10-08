@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Technician Assignments{% endblock %}
+{% block page_title %}Assigned Maintenance Jobs{% endblock %}
+{% block page_subtitle %}Full log of dispatched tasks, historical repairs, and notes{% endblock %}
+
+{% block content %}
+<div class="content-card">
+  <div class="card-header-bar">
+    <h3><i class="fa-solid fa-clipboard-list"></i> Maintenance Task History</h3>
+  </div>
+
+  <div class="filter-bar">
+    <span style="font-size: 0.8rem; font-weight: 700; color: #475569;">Filter by Status:</span>
+    <a href="{{ url_for('technician.assignments') }}" class="btn btn-sm {% if not active_status %}btn-primary{% else %}btn-secondary{% endif %}">All</a>
+    <a href="{{ url_for('technician.assignments', status='ASSIGNED') }}" class="btn btn-sm {% if active_status == 'ASSIGNED' %}btn-primary{% else %}btn-secondary{% endif %}">New Assigned</a>
+    <a href="{{ url_for('technician.assignments', status='IN_PROGRESS') }}" class="btn btn-sm {% if active_status == 'IN_PROGRESS' %}btn-primary{% else %}btn-secondary{% endif %}">In Progress</a>
+    <a href="{{ url_for('technician.assignments', status='RESOLVED') }}" class="btn btn-sm {% if active_status == 'RESOLVED' %}btn-primary{% else %}btn-secondary{% endif %}">Resolved</a>
+  </div>
+
+  <div class="card-body" style="padding: 0;">
+    {% if tasks %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Location</th>
+              <th>Resident</th>
+              <th>Issue Title</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th>Assigned Date</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in tasks %}
+              <tr>
+                <td><strong>{{ t.complaint_id }}</strong></td>
+                <td>
+                  <strong>Flat {{ t.flat }}</strong>
+                  <span style="font-size: 0.72rem; color: #64748b; display: block;">Block {{ t.block }}</span>
+                </td>
+                <td>{{ t.resident_name }} ({{ t.resident_phone }})</td>
+                <td>
+                  <strong style="color: #0f172a;">{{ t.title }}</strong>
+                  <p style="font-size: 0.76rem; color: #64748b;">{{ t.description[:80] }}...</p>
+                </td>
+                <td>
+                  <span style="font-weight: 700; font-size: 0.75rem; color: {% if t.priority in ['HIGH', 'EMERGENCY'] %}#dc2626{% else %}#2563eb{% endif %};">
+                    {{ t.priority }}
+                  </span>
+                </td>
+                <td>
+                  <span class="badge-status badge-{{ t.status.lower() }}">
+                    {{ t.status }}
+                  </span>
+                </td>
+                <td style="font-size: 0.8rem; color: #64748b;">{{ t.created_at | datetime_format }}</td>
+                <td>
+                  {% if t.status == 'ASSIGNED' %}
+                    <form method="POST" action="{{ url_for('technician.update_status', complaint_id=t.complaint_id) }}" style="display:inline;">
+                      <input type="hidden" name="status" value="IN_PROGRESS">
+                      <button type="submit" class="btn btn-primary btn-sm">Start Work</button>
+                    </form>
+                  {% elif t.status == 'IN_PROGRESS' %}
+                    <button type="button" class="btn btn-success btn-sm" onclick="openResolveModal('{{ t.complaint_id }}', '{{ t.title|replace(\"'\", \"\\'\") }}', '{{ t.flat }}')">
+                      <i class="fa-solid fa-clipboard-check"></i> Complete
+                    </button>
+                  {% else %}
+                    <span style="color: #166534; font-size: 0.8rem; font-weight: 600;">Completed</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 48px; color: var(--text-muted);">
+        <p>No tasks found.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Work Report Modal -->
+<div class="modal-backdrop" id="resolveModal">
+  <div class="modal-box" style="max-width: 580px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-clipboard-check" style="color: #10b981;"></i> Complete Work & Submit Report</h3>
+      <button class="modal-close-btn" onclick="closeModal('resolveModal')">&times;</button>
+    </div>
+    <form method="POST" id="resolveForm" enctype="multipart/form-data">
+      <div class="modal-body">
+        <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+          <h4 id="resolveComplaintTitle" style="color: #0f172a; font-size: 0.95rem; font-weight: 700;">Complaint</h4>
+          <span id="resolveComplaintFlat" style="font-size: 0.8rem; color: #2563eb; font-weight: 600;">Flat</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Work Summary *</label>
+          <input type="text" name="work_summary" class="form-control" placeholder="e.g. Repaired lift door sensor" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Work Performed / Action Details *</label>
+          <textarea name="work_performed" class="form-control" rows="3" placeholder="e.g. Replaced damaged sensor module and recalibrated alignment..." required></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-7">
+            <label class="form-label">Parts Used (comma separated)</label>
+            <input type="text" name="parts_used" class="form-control" placeholder="e.g. Door sensor module, Wiring harness">
+          </div>
+          <div class="form-group col-5">
+            <label class="form-label">Time Spent (Mins)</label>
+            <input type="number" name="time_spent_minutes" class="form-control" value="60" min="5" step="5">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Technician Remarks</label>
+          <input type="text" name="remarks" class="form-control" placeholder="Optional notes for resident & management">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-6">
+            <label class="form-label"><i class="fa-solid fa-camera"></i> Before Image</label>
+            <input type="file" name="before_image" class="form-control" accept="image/*">
+          </div>
+          <div class="form-group col-6">
+            <label class="form-label"><i class="fa-solid fa-camera-retro"></i> After Image</label>
+            <input type="file" name="after_image" class="form-control" accept="image/*">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('resolveModal')">Cancel</button>
+        <button type="submit" class="btn btn-success">
+          <i class="fa-solid fa-paper-plane"></i> Submit Work Report
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function openResolveModal(complaintId, title, flat) {
+    document.getElementById("resolveForm").action = `/technician/tasks/${complaintId}/complete`;
+    document.getElementById("resolveComplaintTitle").innerText = `${complaintId}: ${title}`;
+    document.getElementById("resolveComplaintFlat").innerText = `Flat ${flat}`;
+    openModal("resolveModal");
+  }
+</script>
+{% endblock %}

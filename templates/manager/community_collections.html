@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+
+{% block title %}Community Collections{% endblock %}
+{% block page_title %}Community Collections & Events{% endblock %}
+{% block page_subtitle %}Manage festival contributions, society events, tours, and special collections{% endblock %}
+
+{% block content %}
+<!-- Top Metrics Summary Row -->
+<div class="metrics-grid">
+  <!-- Total Collections -->
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Total Collections</h4>
+      <div class="metric-value">{{ summary.total_collections }}</div>
+      <div class="metric-sub">
+        <span style="color: #2563eb; font-weight: 600;">{{ summary.active_collections }} Active</span> • {{ summary.completed_collections }} Completed
+      </div>
+    </div>
+    <div class="metric-icon-box box-blue">
+      <i class="fa-solid fa-layer-group"></i>
+    </div>
+  </div>
+
+  <!-- Expected Target -->
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Expected Funds</h4>
+      <div class="metric-value">₹{{ "{:,.0f}".format(summary.total_expected) }}</div>
+      <div class="metric-sub">Across all active & past drives</div>
+    </div>
+    <div class="metric-icon-box box-indigo">
+      <i class="fa-solid fa-sack-dollar"></i>
+    </div>
+  </div>
+
+  <!-- Collected Funds -->
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Funds Collected</h4>
+      <div class="metric-value" style="color: #16a34a;">₹{{ "{:,.0f}".format(summary.total_collected) }}</div>
+      <div class="metric-sub">
+        <span style="color: #16a34a; font-weight: 600;"><i class="fa-solid fa-arrow-trend-up"></i> {{ summary.collection_rate }}% Realization</span>
+      </div>
+    </div>
+    <div class="metric-icon-box box-emerald">
+      <i class="fa-solid fa-hand-holding-dollar"></i>
+    </div>
+  </div>
+
+  <!-- Pending & Overdue -->
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Pending / Overdue</h4>
+      <div class="metric-value" style="color: #d97706;">₹{{ "{:,.0f}".format(summary.total_pending + summary.total_overdue) }}</div>
+      <div class="metric-sub">
+        <span style="color: #ef4444; font-weight: 600;">{{ summary.total_overdue_count }} Overdue</span> • {{ summary.total_pending_count }} Pending
+      </div>
+    </div>
+    <div class="metric-icon-box box-amber">
+      <i class="fa-solid fa-clock-rotate-left"></i>
+    </div>
+  </div>
+</div>
+
+<!-- Header Action Bar -->
+<div class="content-card" style="margin-bottom: 24px;">
+  <div class="card-body" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; padding: 18px 24px;">
+    <div>
+      <h3 style="font-size: 1.15rem; font-weight: 700; color: #0f172a; margin-bottom: 4px;">
+        <i class="fa-solid fa-calendar-check" style="color: #2563eb;"></i> Community Contribution Drives
+      </h3>
+      <p style="font-size: 0.85rem; color: #64748b; margin: 0;">
+        Create and monitor festival funds, cultural events, travel tours, and special maintenance collections.
+      </p>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <button type="button" class="btn btn-primary" onclick="openModal('createCollectionModal')" style="padding: 10px 20px; font-weight: 600;">
+        <i class="fa-solid fa-plus-circle"></i> + Create New Collection
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Filters Bar -->
+<div class="content-card" style="margin-bottom: 24px;">
+  <div class="card-body" style="padding: 14px 20px;">
+    <form method="GET" action="{{ url_for('community.manager_collections_list') }}" style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">Filter Status:</label>
+        <select name="status" class="form-control" style="width: auto; padding: 6px 12px; font-size: 0.85rem;" onchange="this.form.submit()">
+          <option value="">All Statuses</option>
+          {% for st in collection_statuses %}
+            <option value="{{ st }}" {% if active_status == st %}selected{% endif %}>{{ st }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">Collection Type:</label>
+        <select name="type" class="form-control" style="width: auto; padding: 6px 12px; font-size: 0.85rem;" onchange="this.form.submit()">
+          <option value="">All Types</option>
+          {% for ct in collection_types %}
+            <option value="{{ ct }}" {% if active_type == ct %}selected{% endif %}>{{ ct }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {% if active_status or active_type %}
+        <a href="{{ url_for('community.manager_collections_list') }}" class="btn btn-secondary btn-sm" style="padding: 6px 14px;">
+          <i class="fa-solid fa-rotate-left"></i> Reset
+        </a>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+<!-- Collections Grid / List -->
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 20px; margin-bottom: 30px;">
+  {% for col in collections %}
+    {% set st = col.stats %}
+    <div class="content-card" style="display: flex; flex-direction: column; justify-content: space-between; border-top: 4px solid {% if col.status == 'ACTIVE' %}#2563eb{% elif col.status == 'COMPLETED' %}#10b981{% elif col.status == 'CANCELLED' %}#ef4444{% else %}#f59e0b{% endif %};">
+      <div class="card-body" style="padding: 20px;">
+        <!-- Top Tags -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <span class="badge-status" style="background: #e0e7ff; color: #3730a3; font-weight: 700;">
+              <i class="fa-solid {% if col.type == 'Festival' %}fa-wand-magic-sparkles{% elif col.type == 'Tour' %}fa-bus{% elif col.type == 'Sports Event' %}fa-medal{% elif col.type == 'Emergency Contribution' %}fa-triangle-exclamation{% else %}fa-users{% endif %}"></i> {{ col.type }}
+            </span>
+            <span class="badge-status" style="background: {% if col.payment_type == 'MANDATORY' %}#fee2e2; color: #991b1b;{% else %}#dcfce7; color: #166534;{% endif %} font-weight: 700;">
+              {{ col.payment_type }}
+            </span>
+          </div>
+          <span class="badge-status badge-{{ col.status.lower() }}">
+            {{ col.status }}
+          </span>
+        </div>
+
+        <!-- Title & Description -->
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: #0f172a; margin-bottom: 6px;">
+          <a href="{{ url_for('community.manager_collection_detail', collection_id=col.collection_id) }}" style="color: #0f172a; text-decoration: none;">
+            {{ col.title }}
+          </a>
+        </h3>
+        <p style="font-size: 0.85rem; color: #64748b; line-height: 1.4; margin-bottom: 16px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+          {{ col.description or 'No detailed description provided.' }}
+        </p>
+
+        <!-- Key Details Grid -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8fafc; border: 1px solid var(--border-light); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+          <div>
+            <span style="font-size: 0.72rem; text-transform: uppercase; color: #64748b; font-weight: 600; display: block;">Base Amount</span>
+            <strong style="font-size: 1.05rem; color: #0f172a;">
+              ₹{{ "{:,.2f}".format(col.amount) }}
+              {% if col.has_tier_pricing %}<span style="font-size: 0.7rem; color: #2563eb;">(Tiered)</span>{% endif %}
+            </strong>
+          </div>
+          <div>
+            <span style="font-size: 0.72rem; text-transform: uppercase; color: #64748b; font-weight: 600; display: block;">Payment Deadline</span>
+            <strong style="font-size: 0.88rem; color: #b91c1c;">
+              <i class="fa-regular fa-calendar-xmark"></i> {{ col.payment_deadline }}
+            </strong>
+          </div>
+          <div>
+            <span style="font-size: 0.72rem; text-transform: uppercase; color: #64748b; font-weight: 600; display: block;">Event Date</span>
+            <span style="font-size: 0.85rem; color: #334155; font-weight: 600;">
+              <i class="fa-regular fa-calendar"></i> {{ col.event_date }}
+            </span>
+          </div>
+          <div>
+            <span style="font-size: 0.72rem; text-transform: uppercase; color: #64748b; font-weight: 600; display: block;">Target</span>
+            <span style="font-size: 0.82rem; color: #475569; font-weight: 600;">
+              {{ col.target.type }} {% if col.target.blocks %}(Blk {{ col.target.blocks | join(', ') }}){% endif %}
+            </span>
+          </div>
+        </div>
+
+        <!-- Progress Bar & Collection Stats -->
+        <div style="margin-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px;">
+            <span>Realization Progress</span>
+            <span style="color: #2563eb;">{{ st.collection_rate }}% (₹{{ "{:,.0f}".format(st.total_collected) }} / ₹{{ "{:,.0f}".format(st.total_expected) }})</span>
+          </div>
+          <div style="background: #e2e8f0; height: 8px; border-radius: 999px; overflow: hidden;">
+            <div style="background: {% if st.collection_rate >= 80 %}#10b981{% elif st.collection_rate >= 40 %}#2563eb{% else %}#f59e0b{% endif %}; width: {{ st.collection_rate }}%; height: 100%; border-radius: 999px; transition: width 0.4s ease;"></div>
+          </div>
+        </div>
+
+        <!-- Resident Counts -->
+        <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: #64748b; border-top: 1px dashed var(--border-light); padding-top: 10px; margin-top: 10px;">
+          <span><strong>{{ st.paid_count }}</strong> Paid</span>
+          <span><strong>{{ st.pending_count }}</strong> Pending</span>
+          <span><strong style="color: #ef4444;">{{ st.overdue_count }}</strong> Overdue</span>
+          <span><strong>{{ st.total_records }}</strong> Targeted</span>
+        </div>
+      </div>
+
+      <!-- Action Footer -->
+      <div style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 0.78rem; font-family: monospace; color: #64748b;">{{ col.collection_id }}</span>
+        <a href="{{ url_for('community.manager_collection_detail', collection_id=col.collection_id) }}" class="btn btn-primary btn-sm" style="font-weight: 600; padding: 6px 14px;">
+          <i class="fa-solid fa-chart-pie"></i> Manage & Track &rarr;
+        </a>
+      </div>
+    </div>
+  {% else %}
+    <div style="grid-column: 1 / -1; text-align: center; padding: 60px; background: #fff; border-radius: 12px; border: 1px dashed var(--border-light);">
+      <i class="fa-solid fa-champagne-glasses" style="font-size: 3rem; color: #cbd5e1; margin-bottom: 16px;"></i>
+      <h3 style="color: #334155; margin-bottom: 6px;">No Community Collections Found</h3>
+      <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 20px;">Get started by launching a festival celebration drive, trip collection, or community fund.</p>
+      <button type="button" class="btn btn-primary" onclick="openModal('createCollectionModal')">
+        <i class="fa-solid fa-plus-circle"></i> Create First Collection
+      </button>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Modal: Create New Collection -->
+<div class="modal-backdrop" id="createCollectionModal">
+  <div class="modal-box" style="max-width: 680px; max-height: 90vh; overflow-y: auto;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-plus-circle" style="color: #2563eb;"></i> Create Community Collection / Event</h3>
+      <button class="modal-close-btn" onclick="closeModal('createCollectionModal')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('community.manager_create_collection') }}">
+      <div class="modal-body" style="padding: 24px;">
+        
+        <!-- Row 1: Title & Type -->
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label">Collection / Event Title *</label>
+            <input type="text" name="title" class="form-control" placeholder="e.g. Diwali Celebration 2026" required>
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label">Collection Type *</label>
+            <select name="type" class="form-control" required>
+              {% for ct in collection_types %}
+                <option value="{{ ct }}">{{ ct }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label">Description & Event Highlights</label>
+          <textarea name="description" class="form-control" rows="2" placeholder="Explain the purpose, activities, dining plans, or items included..."></textarea>
+        </div>
+
+        <!-- Row 2: Payment Type & Amounts -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label">Payment Obligation *</label>
+            <select name="payment_type" id="createPaymentType" class="form-control" onchange="togglePaymentTypeOptions(this.value)" required>
+              <option value="MANDATORY">Mandatory (Auto-generate for target residents)</option>
+              <option value="OPTIONAL">Optional (Residents choose to Join / Decline)</option>
+            </select>
+            <small style="font-size: 0.75rem; color: #64748b;">Mandatory drives create invoices immediately.</small>
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label">Standard Amount (₹) *</label>
+            <input type="number" step="0.01" name="amount" class="form-control" placeholder="e.g. 500" required>
+          </div>
+        </div>
+
+        <!-- Optional Tiered Pricing (for tours/events) -->
+        <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <label style="font-size: 0.85rem; font-weight: 700; color: #0f172a; margin: 0; cursor: pointer;">
+              <input type="checkbox" name="has_tier_pricing" id="hasTierPricing" onchange="toggleTierPricing(this.checked)" style="margin-right: 6px;">
+              Enable Differentiated / Per-Person Category Pricing (Tours & Excursions)
+            </label>
+          </div>
+          <div id="tierPricingFields" style="display: none; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px;">
+            <div>
+              <label style="font-size: 0.75rem; font-weight: 600; color: #475569;">Adult (₹)</label>
+              <input type="number" step="0.01" name="tier_adult" class="form-control" placeholder="4500">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; font-weight: 600; color: #475569;">Child &lt; 12 yrs (₹)</label>
+              <input type="number" step="0.01" name="tier_child" class="form-control" placeholder="2500">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; font-weight: 600; color: #475569;">Senior 60+ (₹)</label>
+              <input type="number" step="0.01" name="tier_senior" class="form-control" placeholder="3500">
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 3: Event Date & Payment Deadline -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label">Event Date *</label>
+            <input type="date" name="event_date" class="form-control" required>
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label">Payment Deadline *</label>
+            <input type="date" name="payment_deadline" class="form-control" required>
+          </div>
+        </div>
+
+        <!-- Row 4: Target Residents Selector -->
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label">Target Audience / Residents *</label>
+          <select name="target_type" id="targetTypeSelect" class="form-control" onchange="toggleTargetDetails(this.value)">
+            <option value="ALL">All Residents (Entire Society)</option>
+            <option value="BLOCK">Specific Blocks (e.g. Block A + Block B)</option>
+            <option value="FLATS">Specific Flat Numbers</option>
+            <option value="SELECTED_RESIDENTS">Specific Resident Names</option>
+          </select>
+        </div>
+
+        <!-- Target Specific Block checkboxes -->
+        <div id="targetBlockSection" style="display: none; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+          <label style="font-size: 0.8rem; font-weight: 700; color: #1e3a8a; display: block; margin-bottom: 6px;">Select Applicable Blocks:</label>
+          <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+            {% for b in blocks %}
+              <label style="font-size: 0.85rem; font-weight: 600; color: #1e293b; cursor: pointer;">
+                <input type="checkbox" name="target_blocks" value="{{ b.code }}" checked> Block {{ b.code }} ({{ b.name }})
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Row 5: Limits & Options -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label">Max Participants Capacity (Optional)</label>
+            <input type="number" name="max_participants" class="form-control" placeholder="e.g. 100 (leave blank for unlimited)">
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label">Recurrence</label>
+            <select name="recurrence" class="form-control">
+              <option value="ONE_TIME">One Time</option>
+              <option value="MONTHLY">Monthly</option>
+              <option value="QUARTERLY">Quarterly</option>
+              <option value="YEARLY">Yearly</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 20px; align-items: center; margin-top: 10px;">
+          <label style="font-size: 0.85rem; font-weight: 600; color: #475569; cursor: pointer;">
+            <input type="checkbox" name="allow_overdue_payments" value="true" checked style="margin-right: 6px;">
+            Accept late / overdue payments after deadline
+          </label>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="padding: 16px 24px; background: #f8fafc;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('createCollectionModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="padding: 10px 24px; font-weight: 700;">
+          <i class="fa-solid fa-check-circle"></i> Create & Launch Collection
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function toggleTierPricing(checked) {
+    document.getElementById("tierPricingFields").style.display = checked ? "grid" : "none";
+  }
+
+  function toggleTargetDetails(val) {
+    document.getElementById("targetBlockSection").style.display = (val === "BLOCK") ? "block" : "none";
+  }
+
+  function togglePaymentTypeOptions(val) {
+    const tierBox = document.getElementById("hasTierPricing");
+    if (val === "OPTIONAL") {
+      // optional tours frequently have tiered pricing
+    }
+  }
+</script>
+{% endblock %}

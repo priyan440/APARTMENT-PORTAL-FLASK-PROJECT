@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Receipt {{ payment.payment.receipt_no if payment.payment else payment.payment_id }} - Community Contribution{% endblock %}
+{% block page_title %}Official Community Contribution Receipt{% endblock %}
+{% block page_subtitle %}Verified settlement voucher for society events, festival drives, and contributions{% endblock %}
+
+{% block content %}
+<div style="max-width: 680px; margin: 0 auto;">
+  <!-- Action Buttons Above Receipt -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <a href="{{ url_for('community.resident_community_payments') if session_role == 'RESIDENT' else url_for('community.manager_collection_detail', collection_id=payment.collection_id) }}" class="btn btn-secondary btn-sm">
+      <i class="fa-solid fa-arrow-left"></i> Back
+    </a>
+    <div style="display: flex; gap: 10px;">
+      <button onclick="window.print()" class="btn btn-secondary btn-sm">
+        <i class="fa-solid fa-print"></i> Print Receipt
+      </button>
+      <a href="{{ url_for('community.download_community_payment_pdf', payment_id=payment.payment_id) }}" class="btn btn-primary btn-sm">
+        <i class="fa-solid fa-file-pdf"></i> Download Official PDF
+      </a>
+    </div>
+  </div>
+
+  <!-- Printable Receipt Card -->
+  <div class="content-card" style="border: 2px solid #cbd5e1; box-shadow: var(--shadow-lg); background: #ffffff; padding: 36px; border-radius: 16px;">
+    
+    <!-- Header with Greenwood Estates Branding -->
+    <div style="text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 24px;">
+      <div style="display: inline-flex; align-items: center; justify-content: center; width: 50px; height: 50px; background: linear-gradient(135deg, #2563eb, #6366f1); color: #fff; border-radius: 12px; font-size: 1.5rem; margin-bottom: 10px;">
+        <i class="fa-solid fa-city"></i>
+      </div>
+      <h2 style="font-family: var(--font-display); font-size: 1.4rem; font-weight: 800; color: #0f172a; letter-spacing: 0.04em; margin-bottom: 2px;">
+        GREENWOOD ESTATES RESIDENTIAL PORTAL
+      </h2>
+      <p style="font-size: 0.85rem; font-weight: 700; color: #2563eb; text-transform: uppercase; letter-spacing: 0.08em; margin: 0;">
+        COMMUNITY COLLECTION & EVENT CONTRIBUTION RECEIPT
+      </p>
+    </div>
+
+    <!-- Meta Grid -->
+    {% set p_info = payment.payment or {} %}
+    <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: 10px; padding: 18px; margin-bottom: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; font-size: 0.85rem;">
+      <div>
+        <span style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; display: block;">Receipt Number</span>
+        <strong style="font-size: 1.05rem; color: #0f172a;">{{ p_info.receipt_no or 'CPR-2026-SETTLED' }}</strong>
+      </div>
+      <div>
+        <span style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; display: block;">Payment Reference ID</span>
+        <strong style="font-family: monospace; font-size: 0.95rem; color: #2563eb;">{{ payment.payment_id }}</strong>
+      </div>
+      <div>
+        <span style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; display: block;">Resident Name</span>
+        <strong style="color: #0f172a;">{{ payment.resident_name }}</strong>
+      </div>
+      <div>
+        <span style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; display: block;">Flat & Block</span>
+        <strong style="color: #0f172a;">Flat {{ payment.flat }} (Block {{ payment.block }})</strong>
+      </div>
+      <div>
+        <span style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; display: block;">Payment Status</span>
+        <span class="badge-status badge-paid" style="display: inline-block; font-size: 0.8rem;">
+          <i class="fa-solid fa-circle-check"></i> SETTLED (PAID)
+        </span>
+      </div>
+      <div>
+        <span style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; display: block;">Payment Date & Mode</span>
+        <strong style="color: #0f172a;">
+          {{ p_info.paid_at[:10] if p_info.paid_at else 'Today' }} • {{ p_info.method or 'ONLINE' }}
+        </strong>
+      </div>
+    </div>
+
+    <!-- Event Banner -->
+    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <span style="font-size: 0.72rem; text-transform: uppercase; color: #3b82f6; font-weight: 700;">Event / Drive</span>
+        <h4 style="font-size: 1.15rem; font-weight: 800; color: #1e3a8a; margin: 2px 0 0 0;">
+          {{ payment.collection_title }}
+        </h4>
+      </div>
+      <div style="text-align: right;">
+        <span class="badge-status" style="background: #dbeafe; color: #1e40af; font-weight: 700;">
+          {{ payment.collection_type }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Detailed Participant & Item Breakdown -->
+    <div style="margin-bottom: 24px;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
+        <thead>
+          <tr style="border-bottom: 2px solid #cbd5e1; background: #f1f5f9;">
+            <th style="padding: 10px; text-align: left; color: #334155; font-weight: 700;">Item / Participant</th>
+            <th style="padding: 10px; text-align: center; color: #334155; font-weight: 700;">Category</th>
+            <th style="padding: 10px; text-align: right; color: #334155; font-weight: 700;">Amount (INR)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if payment.participants %}
+            {% for mem in payment.participants %}
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px; color: #0f172a;">
+                  <strong>{{ mem.name }}</strong>
+                  <span style="font-size: 0.75rem; color: #64748b; display: block;">{{ mem.relationship }}</span>
+                </td>
+                <td style="padding: 10px; text-align: center; font-size: 0.8rem; color: #475569;">
+                  <span style="background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-weight: 600;">{{ mem.category }}</span>
+                </td>
+                <td style="padding: 10px; text-align: right; font-weight: 600; color: #0f172a;">
+                  ₹{{ "{:,.2f}".format(mem.amount) }}
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr style="border-bottom: 1px solid #e2e8f0;">
+              <td style="padding: 10px; color: #0f172a;">
+                <strong>Special Contribution Obligation</strong>
+                <span style="font-size: 0.75rem; color: #64748b; display: block;">Single Flat Contribution</span>
+              </td>
+              <td style="padding: 10px; text-align: center; font-size: 0.8rem; color: #475569;">FLAT</td>
+              <td style="padding: 10px; text-align: right; font-weight: 600; color: #0f172a;">
+                ₹{{ "{:,.2f}".format(payment.total_amount or payment.amount) }}
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+        <tfoot>
+          <tr style="background: #ecfdf5; border-top: 2px solid #a7f3d0;">
+            <td style="padding: 12px 10px; font-size: 1rem; font-weight: 800; color: #065f46;">
+              TOTAL AMOUNT PAID
+            </td>
+            <td style="padding: 12px 10px; text-align: center; font-weight: 700; color: #065f46;">
+              {{ payment.participant_count or 1 }} Member(s)
+            </td>
+            <td style="padding: 12px 10px; text-align: right; font-size: 1.25rem; font-weight: 800; color: #065f46;">
+              ₹{{ "{:,.2f}".format(payment.total_amount or payment.amount) }}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- Transaction & Verification Footer -->
+    <div style="background: #fafafa; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+      <div>
+        <span style="font-size: 0.75rem; color: #64748b; font-weight: 600; display: block;">Transaction Reference:</span>
+        <span style="font-family: monospace; font-size: 0.82rem; color: #0f172a; font-weight: 700;">
+          {{ p_info.transaction_id or 'TXN-COMM-VERIFIED' }}
+        </span>
+        <p style="font-size: 0.72rem; color: #94a3b8; margin: 4px 0 0 0;">
+          Computer-generated official receipt issued by Greenwood Estates Management.
+        </p>
+      </div>
+      <div style="text-align: right;">
+        <div style="display: inline-block; padding: 6px 12px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; font-size: 0.78rem; font-weight: 700; color: #065f46;">
+          <i class="fa-solid fa-stamp"></i> VERIFIED PAID
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

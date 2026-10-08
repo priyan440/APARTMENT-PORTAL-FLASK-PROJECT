@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Bills & Payments{% endblock %}
+{% block page_title %}Maintenance Dues & Payments{% endblock %}
+{% block page_subtitle %}Review monthly maintenance breakdowns and settle dues seamlessly{% endblock %}
+
+{% block content %}
+<!-- Bills List Card -->
+<div class="content-card" style="margin-bottom: 28px;">
+  <div class="card-header-bar">
+    <h3><i class="fa-solid fa-file-invoice-dollar"></i> Monthly Maintenance Bills</h3>
+  </div>
+
+  <div class="card-body" style="padding: 0;">
+    {% if bills %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>Bill ID</th>
+              <th>Billing Month</th>
+              <th>Breakdown</th>
+              <th>Total Amount</th>
+              <th>Due Date</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for b in bills %}
+              <tr>
+                <td><strong>{{ b.bill_id }}</strong></td>
+                <td style="font-weight: 600;">{{ b.month_year }}</td>
+                <td style="font-size: 0.8rem; color: #475569;">
+                  Maint: ₹{{ "{:,.0f}".format(b.components.maintenance_charge) }} | Water: ₹{{ "{:,.0f}".format(b.components.water_charge) }} | Parking: ₹{{ "{:,.0f}".format(b.components.parking_charge) }}
+                  {% if b.components.other_charge %} | Other: ₹{{ "{:,.0f}".format(b.components.other_charge) }}{% endif %}
+                </td>
+                <td style="font-size: 1.05rem; font-weight: 700; color: #0f172a;">
+                  ₹{{ "{:,.2f}".format(b.total_amount) }}
+                </td>
+                <td style="font-size: 0.85rem;">{{ b.due_date }}</td>
+                <td>
+                  <span class="badge-status badge-{{ b.status.lower() }}">
+                    {{ b.status }}
+                  </span>
+                </td>
+                <td>
+                  {% if b.status != 'PAID' %}
+                    <button type="button" class="btn btn-primary btn-sm" onclick="openPaymentModal('{{ b.bill_id }}', '{{ b.month_year }}', {{ b.total_amount }})">
+                      <i class="fa-solid fa-credit-card"></i> Pay Now
+                    </button>
+                  {% else %}
+                    <div style="display: flex; gap: 6px;">
+                      <a href="{{ url_for('resident.bill_receipt', bill_id=b.bill_id) }}" class="btn btn-secondary btn-sm">
+                        <i class="fa-solid fa-receipt"></i> Receipt
+                      </a>
+                      <a href="{{ url_for('resident.download_bill_pdf', bill_id=b.bill_id) }}" class="btn btn-primary btn-sm">
+                        <i class="fa-solid fa-file-pdf"></i> PDF
+                      </a>
+                    </div>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+        <i class="fa-solid fa-file-circle-check" style="font-size: 2.5rem; margin-bottom: 12px; color: #10b981;"></i>
+        <h4>No bills found</h4>
+        <p style="font-size: 0.85rem;">All previous monthly maintenance invoices are settled.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Payment History Card -->
+<div class="content-card">
+  <div class="card-header-bar">
+    <h3><i class="fa-solid fa-receipt"></i> Payment Transactions History</h3>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if payments %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>Payment ID</th>
+              <th>Bill ID</th>
+              <th>Amount Settled</th>
+              <th>Transaction Reference</th>
+              <th>Method</th>
+              <th>Payment Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in payments %}
+              <tr>
+                <td><strong>{{ p.payment_id }}</strong></td>
+                <td>{{ p.bill_id }}</td>
+                <td style="font-weight: 700; color: #166534;">₹{{ "{:,.2f}".format(p.amount) }}</td>
+                <td style="font-family: monospace; font-size: 0.8rem; background: #f8fafc; padding: 4px 8px; border-radius: 4px;">
+                  {{ p.transaction_ref }}
+                </td>
+                <td>{{ p.payment_method }}</td>
+                <td style="font-size: 0.82rem; color: var(--text-muted);">{{ p.payment_date | datetime_format }}</td>
+                <td>
+                  <span class="badge-status badge-approved">
+                    <i class="fa-solid fa-circle-check"></i> SUCCESS
+                  </span>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 32px; color: var(--text-muted);">
+        <p style="font-size: 0.85rem;">No past transactions found.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Simulated Payment Modal (Demo Scenario 3) -->
+<div class="modal-backdrop" id="paymentModal">
+  <div class="modal-box" style="max-width: 520px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-shield-halved" style="color: #10b981;"></i> Secure Payment Gateway (Test Sandbox)</h3>
+      <button class="modal-close-btn" onclick="closeModal('paymentModal')">&times;</button>
+    </div>
+    <form method="POST" id="paymentForm">
+      <div class="modal-body">
+        <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 0.85rem; color: #64748b;">Invoice Period:</span>
+            <strong id="payModalMonth" style="color: #0f172a;">Month Year</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+            <span style="font-size: 1rem; font-weight: 700; color: #0f172a;">Total Payable:</span>
+            <span id="payModalAmount" style="font-size: 1.4rem; font-weight: 800; color: #166534;">₹0.00</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Select Payment Method</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+            <label style="border: 1px solid var(--border-light); padding: 12px; border-radius: 8px; text-align: center; cursor: pointer; background: #fff;" onclick="selectMethod(this)">
+              <input type="radio" name="payment_method" value="UPI" checked style="margin-bottom: 4px;">
+              <div style="font-size: 0.85rem; font-weight: 700;"><i class="fa-solid fa-mobile-screen"></i> UPI</div>
+            </label>
+            <label style="border: 1px solid var(--border-light); padding: 12px; border-radius: 8px; text-align: center; cursor: pointer; background: #fff;" onclick="selectMethod(this)">
+              <input type="radio" name="payment_method" value="CARD" style="margin-bottom: 4px;">
+              <div style="font-size: 0.85rem; font-weight: 700;"><i class="fa-solid fa-credit-card"></i> Card</div>
+            </label>
+            <label style="border: 1px solid var(--border-light); padding: 12px; border-radius: 8px; text-align: center; cursor: pointer; background: #fff;" onclick="selectMethod(this)">
+              <input type="radio" name="payment_method" value="NETBANKING" style="margin-bottom: 4px;">
+              <div style="font-size: 0.85rem; font-weight: 700;"><i class="fa-solid fa-building-columns"></i> NetBank</div>
+            </label>
+          </div>
+        </div>
+
+        <div style="font-size: 0.78rem; color: #059669; background: #ecfdf5; padding: 10px; border-radius: 6px; border: 1px solid #a7f3d0;">
+          <i class="fa-solid fa-lock"></i> <strong>Safe Simulated Mode:</strong> Test payment simulator. No real money will be charged. Instantly settles bill and issues receipt.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('paymentModal')">Cancel</button>
+        <button type="submit" class="btn btn-success" style="padding: 10px 20px;">
+          <i class="fa-solid fa-check"></i> Authorize & Complete Payment
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function openPaymentModal(billId, monthYear, amount) {
+    document.getElementById("paymentForm").action = `/resident/bills/${billId}/pay`;
+    document.getElementById("payModalMonth").innerText = monthYear;
+    document.getElementById("payModalAmount").innerText = `₹${amount.toLocaleString()}`;
+    openModal("paymentModal");
+  }
+
+  function selectMethod(el) {
+    el.querySelector("input[type='radio']").checked = true;
+  }
+</script>
+{% endblock %}

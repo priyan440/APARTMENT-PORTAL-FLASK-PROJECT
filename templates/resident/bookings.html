@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}My Bookings{% endblock %}
+{% block page_title %}My Amenity Bookings{% endblock %}
+{% block page_subtitle %}Track reservation requests, manager approvals, and official slot receipts{% endblock %}
+
+{% block content %}
+<div class="content-card">
+  <div class="card-header-bar">
+    <h3><i class="fa-solid fa-ticket"></i> Reservation History</h3>
+    <a href="{{ url_for('resident.amenities') }}" class="btn btn-primary btn-sm">
+      <i class="fa-solid fa-plus"></i> New Reservation
+    </a>
+  </div>
+
+  <div class="card-body" style="padding: 0;">
+    {% if bookings %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>Booking ID</th>
+              <th>Amenity</th>
+              <th>Date</th>
+              <th>Time Slot</th>
+              <th>Guests</th>
+              <th>Status</th>
+              <th>Approval Details</th>
+              <th>Receipt</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for b in bookings %}
+              <tr>
+                <td><strong>{{ b.booking_id }}</strong></td>
+                <td style="font-weight: 600;">{{ b.amenity_name }}</td>
+                <td>{{ b.booking_date }}</td>
+                <td>
+                  <span style="background: #f1f5f9; padding: 3px 8px; border-radius: 4px; font-weight: 600; font-size: 0.8rem;">
+                    {{ b.start_time }} – {{ b.end_time }}
+                  </span>
+                </td>
+                <td>{{ b.guests_count }}</td>
+                <td>
+                  <span class="badge-status badge-{{ b.status.lower() }}">
+                    {{ b.status }}
+                  </span>
+                </td>
+                <td style="font-size: 0.8rem; color: var(--text-muted);">
+                  {% if b.status == 'APPROVED' %}
+                    <span style="color: #166534; font-weight: 600;">
+                      <i class="fa-solid fa-circle-check"></i> {{ b.approval.approved_by_name or 'Manager' }}
+                    </span>
+                  {% elif b.status == 'PENDING' %}
+                    <span style="color: #b45309; font-style: italic;">
+                      <i class="fa-solid fa-clock"></i> Awaiting Manager Review
+                    </span>
+                  {% elif b.status == 'REJECTED' %}
+                    <span style="color: #991b1b;">
+                      {{ b.approval.remarks or 'Unavailable' }}
+                    </span>
+                  {% else %}
+                    <span>{{ b.status }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if b.status == 'APPROVED' %}
+                    <div style="display: flex; gap: 6px;">
+                      <a href="{{ url_for('resident.booking_receipt', booking_id=b.booking_id) }}" class="btn btn-secondary btn-sm" title="View Digital Receipt">
+                        <i class="fa-solid fa-qrcode"></i> Receipt
+                      </a>
+                      <a href="{{ url_for('resident.download_booking_pdf', booking_id=b.booking_id) }}" class="btn btn-primary btn-sm" title="Download Official PDF">
+                        <i class="fa-solid fa-file-pdf"></i> PDF
+                      </a>
+                    </div>
+                  {% else %}
+                    <span style="color: #cbd5e1; font-size: 0.8rem;">N/A</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 48px; color: var(--text-muted);">
+        <i class="fa-solid fa-calendar-xmark" style="font-size: 2.5rem; margin-bottom: 12px; color: #cbd5e1;"></i>
+        <h4>No amenity bookings yet</h4>
+        <p style="font-size: 0.85rem;">Reserve the Community Hall, Swimming Pool, or Tennis Court to get started.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

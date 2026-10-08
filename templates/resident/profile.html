@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile{% endblock %}
+{% block page_title %}Resident Profile{% endblock %}
+{% block page_subtitle %}Manage your personal details and account credentials{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+  <!-- Profile Details Card -->
+  <div class="content-card">
+    <div class="card-header-bar">
+      <h3><i class="fa-solid fa-user-gear"></i> Personal & Flat Information</h3>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('resident.profile') }}">
+        <input type="hidden" name="action" value="update_details">
+
+        <div class="form-group">
+          <label class="form-label">Resident ID</label>
+          <input type="text" class="form-control" value="{{ user.user_id }}" disabled style="background:#f8fafc; font-weight: 700;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" name="name" class="form-control" value="{{ user.name }}" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-control" value="{{ user.email }}" disabled style="background:#f8fafc;">
+          <small style="color: #64748b; font-size: 0.75rem;">Email changes must be requested through building administration.</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Phone Number</label>
+          <input type="tel" name="phone" class="form-control" value="{{ user.phone }}" required>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Block & Flat</label>
+            <input type="text" class="form-control" value="Block {{ user.block }} - Flat {{ user.flat }}" disabled style="background:#f8fafc; font-weight: 600;">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Resident Type</label>
+            <input type="text" class="form-control" value="{{ user.resident_type }}" disabled style="background:#f8fafc; font-weight: 600;">
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-floppy-disk"></i> Update Profile Details
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Change Password Card -->
+  <div class="content-card">
+    <div class="card-header-bar">
+      <h3><i class="fa-solid fa-lock"></i> Change Security Password</h3>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('resident.profile') }}">
+        <input type="hidden" name="action" value="change_password">
+
+        <div class="form-group">
+          <label class="form-label">Current Password</label>
+          <input type="password" name="current_password" class="form-control" placeholder="Enter existing password" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">New Password</label>
+          <input type="password" name="new_password" class="form-control" placeholder="Minimum 6 characters" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Confirm New Password</label>
+          <input type="password" name="confirm_password" class="form-control" placeholder="Re-type new password" required>
+        </div>
+
+        <button type="submit" class="btn btn-secondary">
+          <i class="fa-solid fa-key"></i> Update Password
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

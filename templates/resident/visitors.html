@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Visitors & Parcels{% endblock %}
+{% block page_title %}Visitors & Gate Deliveries{% endblock %}
+{% block page_subtitle %}Pre-authorize expected visitors and track packages received at security{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 3fr 2fr; gap: 24px;">
+  <!-- Visitors Card -->
+  <div class="content-card">
+    <div class="card-header-bar">
+      <h3><i class="fa-solid fa-id-card-clip"></i> Expected & Past Visitors</h3>
+      <button type="button" class="btn btn-primary btn-sm" onclick="openModal('inviteVisitorModal')">
+        <i class="fa-solid fa-user-plus"></i> Pre-Authorize Visitor
+      </button>
+    </div>
+
+    <div class="card-body" style="padding: 0;">
+      {% if visitors %}
+        <div class="table-responsive">
+          <table class="portal-table">
+            <thead>
+              <tr>
+                <th>Visitor ID</th>
+                <th>Name</th>
+                <th>Purpose</th>
+                <th>Date & Time</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for v in visitors %}
+                <tr>
+                  <td><strong>{{ v.visitor_id }}</strong></td>
+                  <td style="font-weight: 600;">
+                    {{ v.visitor_name }}
+                    <span style="font-size: 0.75rem; color: #64748b; display: block;">{{ v.phone }}</span>
+                  </td>
+                  <td>{{ v.purpose }}</td>
+                  <td style="font-size: 0.8rem;">
+                    {{ v.expected_date }} ({{ v.expected_time }})
+                  </td>
+                  <td>
+                    <span class="badge-status badge-{{ v.status.lower() }}">
+                      {{ v.status }}
+                    </span>
+                  </td>
+                  <td>
+                    {% if v.status == 'EXPECTED' %}
+                      <form method="POST" action="{{ url_for('resident.visitors') }}" style="display:inline;">
+                        <input type="hidden" name="action" value="cancel">
+                        <input type="hidden" name="visitor_id" value="{{ v.visitor_id }}">
+                        <button type="submit" class="btn btn-secondary btn-sm" title="Cancel invitation">Cancel</button>
+                      </form>
+                    {% else %}
+                      <span style="font-size: 0.75rem; color: #94a3b8;">Checked</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+          <p>No visitor history found.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Deliveries Card -->
+  <div class="content-card">
+    <div class="card-header-bar">
+      <h3><i class="fa-solid fa-box"></i> Gate Deliveries</h3>
+    </div>
+    <div class="card-body" style="padding: 16px 20px;">
+      {% if deliveries %}
+        {% for d in deliveries %}
+          <div style="padding: 12px; border: 1px solid var(--border-light); border-radius: 8px; margin-bottom: 12px; background: {% if d.status == 'RECEIVED' %}#eff6ff{% else %}#ffffff{% endif %};">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-weight: 700; font-size: 0.85rem; color: #1e293b;">
+                <i class="fa-solid fa-truck-ramp-box" style="color: #2563eb;"></i> {{ d.company }}
+              </span>
+              <span class="badge-status {% if d.status == 'RECEIVED' %}badge-open{% else %}badge-approved{% endif %}">
+                {{ d.status }}
+              </span>
+            </div>
+            <p style="font-size: 0.82rem; color: #475569; margin-bottom: 4px;">{{ d.parcel_details }}</p>
+            <div style="font-size: 0.75rem; color: #94a3b8;">
+              Arrival: {{ d.arrival_time | datetime_format }}
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div style="text-align: center; padding: 32px; color: var(--text-muted);">
+          <p style="font-size: 0.85rem;">No parcels waiting at security gate.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Pre-authorize Visitor Modal -->
+<div class="modal-backdrop" id="inviteVisitorModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-user-plus" style="color: #2563eb;"></i> Pre-Authorize Expected Visitor</h3>
+      <button class="modal-close-btn" onclick="closeModal('inviteVisitorModal')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('resident.visitors') }}">
+      <div class="modal-body">
+        <input type="hidden" name="action" value="preauthorize">
+
+        <div class="form-group">
+          <label class="form-label">Visitor Full Name</label>
+          <input type="text" name="visitor_name" class="form-control" placeholder="e.g. Rajesh Sharma" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Visitor Contact Number</label>
+          <input type="tel" name="phone" class="form-control" placeholder="+91 98400 00000" required>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Expected Date</label>
+            <input type="date" name="expected_date" class="form-control" required value="{{ now_date }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Expected Arrival Time</label>
+            <input type="time" name="expected_time" class="form-control" required value="18:00">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Visit Purpose</label>
+          <input type="text" name="purpose" class="form-control" placeholder="Guest / Family Visit / Contractor" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Vehicle Registration Number (Optional)</label>
+          <input type="text" name="vehicle_number" class="form-control" placeholder="e.g. TN58ZZ1234">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('inviteVisitorModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Visitor Pass</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

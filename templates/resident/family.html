@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Family Members{% endblock %}
+{% block page_title %}Family Members{% endblock %}
+{% block page_subtitle %}Manage embedded family records registered under Flat {{ session.get('flat') }}{% endblock %}
+
+{% block content %}
+<div class="content-card">
+  <div class="card-header-bar">
+    <h3><i class="fa-solid fa-people-roof"></i> Registered Family Members</h3>
+    <button type="button" class="btn btn-primary btn-sm" onclick="openModal('addFamilyModal')">
+      <i class="fa-solid fa-plus"></i> Add Family Member
+    </button>
+  </div>
+
+  <div class="card-body" style="padding: 0;">
+    {% if family_members %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>Member ID</th>
+              <th>Full Name</th>
+              <th>Relationship</th>
+              <th>Age</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in family_members %}
+              <tr>
+                <td><strong>{{ m.member_id }}</strong></td>
+                <td>{{ m.name }}</td>
+                <td>
+                  <span style="background:#f1f5f9; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 0.8rem;">
+                    {{ m.relationship }}
+                  </span>
+                </td>
+                <td>{{ m.age }} yrs</td>
+                <td>
+                  <form method="POST" action="{{ url_for('resident.family_members') }}" onsubmit="return confirm('Remove this family member?');" style="display:inline;">
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="member_id" value="{{ m.member_id }}">
+                    <button type="submit" class="btn btn-danger btn-sm" title="Remove member">
+                      <i class="fa-solid fa-trash"></i> Delete
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+        <i class="fa-solid fa-user-group" style="font-size: 2.5rem; margin-bottom: 12px; color: #cbd5e1;"></i>
+        <h4>No family members registered yet</h4>
+        <p style="font-size: 0.85rem;">Click 'Add Family Member' above to register household members.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Add Family Member Modal -->
+<div class="modal-backdrop" id="addFamilyModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-user-plus" style="color: #2563eb;"></i> Add Family Member</h3>
+      <button class="modal-close-btn" onclick="closeModal('addFamilyModal')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('resident.family_members') }}">
+      <div class="modal-body">
+        <input type="hidden" name="action" value="add">
+        
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" name="name" class="form-control" placeholder="e.g. Meera Kumar" required>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Relationship</label>
+            <select name="relationship" class="form-select" required>
+              <option value="Spouse">Spouse</option>
+              <option value="Son">Son</option>
+              <option value="Daughter">Daughter</option>
+              <option value="Father">Father</option>
+              <option value="Mother">Mother</option>
+              <option value="Brother">Brother</option>
+              <option value="Sister">Sister</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Age</label>
+            <input type="number" name="age" class="form-control" min="1" max="120" placeholder="e.g. 35" required>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addFamilyModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Member</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

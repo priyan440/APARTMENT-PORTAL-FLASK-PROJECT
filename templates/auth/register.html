@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resident Registration - Apartment Portal</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    body {
+      background: linear-gradient(135deg, #090e1a 0%, #111a33 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 30px 16px;
+    }
+    .auth-card {
+      background: #ffffff;
+      width: 100%;
+      max-width: 580px;
+      border-radius: var(--radius-lg);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+      overflow: hidden;
+    }
+    .auth-header {
+      background: #0b1329;
+      padding: 26px 32px;
+      color: #ffffff;
+      text-align: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .auth-body {
+      padding: 32px;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-card">
+    <div class="auth-header">
+      <h2 style="font-family: var(--font-display); font-size: 1.35rem;">RESIDENT ONBOARDING</h2>
+      <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">Join the Apartment Residential Community</p>
+    </div>
+
+    <div class="auth-body">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+              <i class="fa-solid fa-circle-exclamation"></i>
+              <div>{{ message }}</div>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" action="{{ url_for('auth.register') }}">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Full Legal Name</label>
+            <input type="text" name="name" class="form-control" placeholder="e.g. Rahul Sharma" value="{{ form.name if form else '' }}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" name="email" class="form-control" placeholder="rahul@example.com" value="{{ form.email if form else '' }}" required>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            <input type="tel" name="phone" class="form-control" placeholder="+91 98400 12345" value="{{ form.phone if form else '' }}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Resident Type</label>
+            <select name="resident_type" class="form-select" required>
+              <option value="OWNER" {% if form and form.resident_type == 'OWNER' %}selected{% endif %}>Flat Owner</option>
+              <option value="TENANT" {% if form and form.resident_type == 'TENANT' %}selected{% endif %}>Registered Tenant</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Residential Block</label>
+            <select name="block" id="blockSelect" class="form-select" required onchange="filterFlats()">
+              <option value="">-- Select Block --</option>
+              {% for b in blocks %}
+                <option value="{{ b.code }}" {% if form and form.block == b.code %}selected{% endif %}>Block {{ b.code }} ({{ b.name }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Flat Number</label>
+            <select name="flat" id="flatSelect" class="form-select" required>
+              <option value="">-- Select Block First --</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" name="password" class="form-control" placeholder="Min 6 characters" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm Password</label>
+            <input type="password" name="confirm_password" class="form-control" placeholder="Re-type password" required>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; margin-top: 10px;">
+          <i class="fa-solid fa-user-plus"></i> Complete Resident Registration
+        </button>
+      </form>
+
+      <div style="text-align: center; margin-top: 20px; font-size: 0.85rem; color: #64748b;">
+        Already registered? <a href="{{ url_for('auth.login') }}" style="color: #2563eb; font-weight: 600; text-decoration: none;">Sign In</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const vacantFlats = [
+      {% for f in vacant_flats %}
+        { flat_number: "{{ f.flat_number }}", block: "{{ f.block }}" },
+      {% endfor %}
+    ];
+
+    const initialSelectedFlat = "{{ form.flat if form else '' }}";
+
+    function filterFlats() {
+      const blk = document.getElementById("blockSelect").value;
+      const flatSelect = document.getElementById("flatSelect");
+      flatSelect.innerHTML = '<option value="">-- Select Available Flat --</option>';
+
+      if (!blk) {
+        flatSelect.innerHTML = '<option value="">-- Please Select Block First --</option>';
+        return;
+      }
+
+      const matching = vacantFlats.filter(f => f.block === blk);
+      if (matching.length === 0) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "No vacant flats currently in Block " + blk;
+        opt.disabled = true;
+        opt.selected = true;
+        flatSelect.appendChild(opt);
+        return;
+      }
+
+      matching.forEach(f => {
+        const opt = document.createElement("option");
+        opt.value = f.flat_number;
+        opt.textContent = `Flat ${f.flat_number} (Available)`;
+        if (f.flat_number === initialSelectedFlat) {
+          opt.selected = true;
+        }
+        flatSelect.appendChild(opt);
+      });
+    }
+
+    // Initialize on page load
+    document.addEventListener("DOMContentLoaded", function() {
+      if (document.getElementById("blockSelect").value) {
+        filterFlats();
+      }
+    });
+  </script>
+</body>
+</html>

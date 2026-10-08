@@ -1,0 +1,376 @@
+{% extends "base.html" %}
+
+{% block title %}Block-Wise Residents{% endblock %}
+{% block page_title %}Block-Wise Resident Management{% endblock %}
+{% block page_subtitle %}Inspect tower flats, resident occupancy, and flat-level records (Section 15){% endblock %}
+
+{% block content %}
+<!-- Block Selection Tabs (Section 15) -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+  <div class="block-nav-tabs" style="margin-bottom: 0;">
+    {% for b in blocks %}
+      <a href="{{ url_for('manager.block_residents', block=b.code) }}" class="block-tab {% if selected_block == b.code %}active{% endif %}">
+        <i class="fa-solid fa-building"></i> Block {{ b.code }} ({{ b.name }})
+      </a>
+    {% endfor %}
+  </div>
+  <button type="button" class="btn btn-primary" onclick="openRegisterResidentModal('{{ selected_block }}')">
+    <i class="fa-solid fa-user-plus"></i> Register New Resident
+  </button>
+</div>
+
+<!-- Block Summary Metrics -->
+<div class="metrics-grid">
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Total Units</h4>
+      <div class="metric-value">{{ total_flats }}</div>
+      <div class="metric-sub">Block {{ selected_block }} apartments</div>
+    </div>
+    <div class="metric-icon-box box-blue">
+      <i class="fa-solid fa-layer-group"></i>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Occupancy</h4>
+      <div class="metric-value">{{ occupied_flats }} / {{ total_flats }}</div>
+      <div class="metric-sub">{{ vacant_flats }} Vacant flats</div>
+    </div>
+    <div class="metric-icon-box box-emerald">
+      <i class="fa-solid fa-door-open"></i>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Registered Residents</h4>
+      <div class="metric-value">{{ total_residents }}</div>
+      <div class="metric-sub">Block {{ selected_block }} residents</div>
+    </div>
+    <div class="metric-icon-box box-cyan">
+      <i class="fa-solid fa-users"></i>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Open Complaints</h4>
+      <div class="metric-value">{{ open_complaints }}</div>
+      <div class="metric-sub">Requiring repair</div>
+    </div>
+    <div class="metric-icon-box box-rose">
+      <i class="fa-solid fa-screwdriver-wrench"></i>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Unpaid Bills</h4>
+      <div class="metric-value">{{ pending_bills_count }}</div>
+      <div class="metric-sub">Overdue / Pending</div>
+    </div>
+    <div class="metric-icon-box box-amber">
+      <i class="fa-solid fa-receipt"></i>
+    </div>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1.4fr 1.6fr; gap: 24px;">
+  <!-- Flats Directory Grid -->
+  <div class="content-card">
+    <div class="card-header-bar">
+      <h3><i class="fa-solid fa-table-cells-large"></i> Flats in Block {{ selected_block }}</h3>
+      <span style="font-size: 0.78rem; color: #64748b;">Click flat to inspect resident profile</span>
+    </div>
+    <div class="card-body">
+      <div style="display: flex; gap: 14px; margin-bottom: 12px; font-size: 0.78rem;">
+        <span style="display: flex; align-items: center; gap: 6px;">
+          <span style="display: inline-block; width: 12px; height: 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 3px;"></span> Occupied
+        </span>
+        <span style="display: flex; align-items: center; gap: 6px;">
+          <span style="display: inline-block; width: 12px; height: 12px; background: #ffffff; border: 1px solid var(--border-light); border-radius: 3px;"></span> Vacant
+        </span>
+      </div>
+
+      <div class="flats-grid">
+        {% for f in flats %}
+          <a href="{{ url_for('manager.block_residents', block=selected_block, flat=f.flat_number) }}" class="flat-box {{ f.status.lower() }} {% if flat_details and flat_details.flat.flat_number == f.flat_number %}selected{% endif %}">
+            <div class="flat-num">{{ f.flat_number }}</div>
+            <div class="flat-tag">{{ f.status }}</div>
+            {% if f.resident %}
+              <div style="font-size: 0.7rem; color: #1e293b; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px;">
+                {{ f.resident.name.split()[0] }}
+              </div>
+            {% endif %}
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Selected Flat Inspection Panel -->
+  <div class="content-card">
+    <div class="card-header-bar">
+      <h3>
+        <i class="fa-solid fa-address-card"></i>
+        {% if flat_details %}
+          Flat {{ flat_details.flat.flat_number }} Details
+        {% else %}
+          Flat Inspection Console
+        {% endif %}
+      </h3>
+    </div>
+    <div class="card-body">
+      {% if flat_details %}
+        {% set res = flat_details.resident %}
+        {% if res %}
+          <!-- Resident Primary Info -->
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; background: #f8fafc; padding: 14px; border-radius: 8px; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 16px;">
+              <div style="width: 52px; height: 52px; border-radius: 50%; background: #2563eb; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; font-weight: 700;">
+                {{ res.name[:2].upper() }}
+              </div>
+              <div>
+                <h4 style="font-size: 1.1rem; font-weight: 700; color: #0f172a;">{{ res.name }}</h4>
+                <p style="font-size: 0.82rem; color: #64748b;">
+                  Resident ID: <strong>{{ res.user_id }}</strong> • Type: <strong style="color: #2563eb;">{{ res.resident_type }}</strong>
+                </p>
+                <p style="font-size: 0.8rem; color: #64748b;">
+                  <i class="fa-solid fa-phone"></i> {{ res.phone }} | <i class="fa-solid fa-envelope"></i> {{ res.email }}
+                </p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="openEditResidentModal('{{ res.user_id }}', '{{ res.name }}', '{{ res.email }}', '{{ res.phone }}', '{{ res.resident_type }}', '{{ res.block }}', '{{ res.flat }}')">
+                <i class="fa-solid fa-pen-to-square"></i> Edit
+              </button>
+              <form method="POST" action="{{ url_for('manager.vacate_flat', flat_number=flat_details.flat.flat_number) }}" onsubmit="return confirm('Are you sure you want to vacate Flat {{ flat_details.flat.flat_number }}? This will unlink resident {{ res.name }}.');" style="display: inline;">
+                <button type="submit" class="btn btn-danger btn-sm" title="Mark Flat Vacant">
+                  <i class="fa-solid fa-door-closed"></i> Vacate Flat
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Embedded Family Members -->
+          <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 8px; color: #334155;">
+            <i class="fa-solid fa-people-roof" style="color: #2563eb;"></i> Family Members ({{ res.family_members | length }})
+          </h4>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px;">
+            {% for m in res.family_members %}
+              <div style="background: #f1f5f9; padding: 6px 12px; border-radius: 6px; font-size: 0.82rem;">
+                <strong>{{ m.name }}</strong> ({{ m.relationship }}, {{ m.age }} yrs)
+              </div>
+            {% else %}
+              <span style="font-size: 0.8rem; color: #94a3b8;">No additional family members registered.</span>
+            {% endfor %}
+          </div>
+
+          <!-- Embedded Vehicles -->
+          <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 8px; color: #334155;">
+            <i class="fa-solid fa-car" style="color: #2563eb;"></i> Registered Vehicles ({{ res.vehicles | length }})
+          </h4>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px;">
+            {% for v in res.vehicles %}
+              <div style="background: #ecfdf5; border: 1px solid #a7f3d0; padding: 6px 12px; border-radius: 6px; font-size: 0.82rem; color: #065f46;">
+                <strong>{{ v.type }}</strong>: {{ v.registration_number }} (Slot: <strong>{{ v.parking_slot }}</strong>)
+              </div>
+            {% else %}
+              <span style="font-size: 0.8rem; color: #94a3b8;">No vehicles registered.</span>
+            {% endfor %}
+          </div>
+
+          <!-- Flat Maintenance Bills -->
+          <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 8px; color: #334155;">
+            <i class="fa-solid fa-file-invoice" style="color: #2563eb;"></i> Recent Maintenance Dues
+          </h4>
+          {% if flat_details.bills %}
+            <div style="margin-bottom: 18px;">
+              {% for b in flat_details.bills %}
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); font-size: 0.82rem;">
+                  <span>{{ b.month_year }} (₹{{ "{:,.0f}".format(b.total_amount) }})</span>
+                  <span class="badge-status badge-{{ b.status.lower() }}">{{ b.status }}</span>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 18px;">No bill records for this flat.</p>
+          {% endif %}
+
+          <!-- Flat Complaints -->
+          <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 8px; color: #334155;">
+            <i class="fa-solid fa-wrench" style="color: #2563eb;"></i> Maintenance Requests
+          </h4>
+          {% if flat_details.complaints %}
+            {% for c in flat_details.complaints %}
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); font-size: 0.82rem;">
+                <span>{{ c.complaint_id }} - {{ c.title }}</span>
+                <span class="badge-status badge-{{ c.status.lower() }}">{{ c.status }}</span>
+              </div>
+            {% endfor %}
+          {% else %}
+            <p style="font-size: 0.8rem; color: #94a3b8;">No maintenance complaints registered.</p>
+          {% endif %}
+
+        {% else %}
+          <div style="text-align: center; padding: 48px 20px; color: var(--text-muted);">
+            <i class="fa-solid fa-door-open" style="font-size: 2.5rem; color: #cbd5e1; margin-bottom: 10px;"></i>
+            <h4 style="color: #0f172a;">Flat {{ flat_details.flat.flat_number }} is Vacant</h4>
+            <p style="font-size: 0.85rem; margin-top: 4px; margin-bottom: 18px;">Floor: {{ flat_details.flat.floor }} | {{ flat_details.flat.bhk }} BHK configuration.</p>
+            <button type="button" class="btn btn-primary btn-sm" onclick="openRegisterResidentModal('{{ flat_details.flat.block }}', '{{ flat_details.flat.flat_number }}')">
+              <i class="fa-solid fa-user-plus"></i> Onboard Resident to Flat {{ flat_details.flat.flat_number }}
+            </button>
+          </div>
+        {% endif %}
+      {% else %}
+        <div style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
+          <i class="fa-solid fa-hand-pointer" style="font-size: 2.5rem; color: #cbd5e1; margin-bottom: 12px;"></i>
+          <h4>Select a Flat to View Full Details</h4>
+          <p style="font-size: 0.85rem;">Click on any flat box in the grid to review resident profile, embedded family, vehicles, bills, and complaints.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Modal: Register New Resident -->
+<div class="modal-backdrop" id="registerResidentModal">
+  <div class="modal-box" style="max-width: 580px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-user-plus" style="color: #2563eb;"></i> Register & Onboard Resident</h3>
+      <button class="modal-close-btn" onclick="closeModal('registerResidentModal')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('manager.register_resident') }}">
+      <div class="modal-body">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Full Legal Name *</label>
+            <input type="text" name="name" class="form-control" placeholder="e.g. Anand Sharma" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address *</label>
+            <input type="email" name="email" class="form-control" placeholder="anand@example.com" required>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Phone Number *</label>
+            <input type="tel" name="phone" class="form-control" placeholder="+91 98400 12345" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Resident Type *</label>
+            <select name="resident_type" class="form-select" required>
+              <option value="OWNER" selected>Flat Owner</option>
+              <option value="TENANT">Registered Tenant</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Residential Block *</label>
+            <select name="block" id="modalBlockSelect" class="form-select" required onchange="filterModalFlats()">
+              {% for b in blocks %}
+                <option value="{{ b.code }}" {% if selected_block == b.code %}selected{% endif %}>Block {{ b.code }} ({{ b.name }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Flat Number *</label>
+            <select name="flat" id="modalFlatSelect" class="form-select" required>
+              <option value="">-- Select Flat --</option>
+              {% for f in flats %}
+                {% if f.status == 'VACANT' %}
+                  <option value="{{ f.flat_number }}" data-block="{{ f.block }}">Flat {{ f.flat_number }} (Vacant)</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Initial Password</label>
+          <input type="password" name="password" class="form-control" value="resident123" required>
+          <small style="font-size: 0.75rem; color: #64748b;">Default password is <code>resident123</code>. Resident can change this after logging in.</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('registerResidentModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Complete Resident Registration</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Edit Resident Details -->
+<div class="modal-backdrop" id="editResidentModal">
+  <div class="modal-box" style="max-width: 540px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-user-pen" style="color: #2563eb;"></i> Edit Resident Profile</h3>
+      <button class="modal-close-btn" onclick="closeModal('editResidentModal')">&times;</button>
+    </div>
+    <form id="editResidentForm" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Resident Full Name *</label>
+          <input type="text" name="name" id="editResName" class="form-control" required>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Email Address *</label>
+            <input type="email" name="email" id="editResEmail" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone Number *</label>
+            <input type="tel" name="phone" id="editResPhone" class="form-control" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Resident Type *</label>
+          <select name="resident_type" id="editResType" class="form-select" required>
+            <option value="OWNER">Flat Owner</option>
+            <option value="TENANT">Registered Tenant</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editResidentModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Profile Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function openRegisterResidentModal(blockCode, flatNumber = '') {
+    const blkSelect = document.getElementById("modalBlockSelect");
+    if (blkSelect && blockCode) {
+      blkSelect.value = blockCode;
+    }
+    const flatSelect = document.getElementById("modalFlatSelect");
+    if (flatSelect && flatNumber) {
+      flatSelect.value = flatNumber;
+    }
+    openModal("registerResidentModal");
+  }
+
+  function openEditResidentModal(userId, name, email, phone, resType, block, flat) {
+    const form = document.getElementById("editResidentForm");
+    form.action = `/manager/residents/${userId}/update`;
+    document.getElementById("editResName").value = name;
+    document.getElementById("editResEmail").value = email;
+    document.getElementById("editResPhone").value = phone;
+    document.getElementById("editResType").value = resType;
+    openModal("editResidentModal");
+  }
+</script>
+{% endblock %}

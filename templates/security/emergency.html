@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Emergency Console{% endblock %}
+{% block page_title %}Emergency SOS Dispatch Center{% endblock %}
+{% block page_subtitle %}Real-time residential distress alarms and security dispatch logs (Section 27){% endblock %}
+
+{% block content %}
+<!-- Active SOS Alerts Section -->
+<div class="content-card" style="border: 2px solid #ef4444; margin-bottom: 28px;">
+  <div class="card-header-bar" style="background: #fef2f2;">
+    <h3 style="color: #991b1b;">
+      <i class="fa-solid fa-tower-broadcast" style="color: #dc2626;"></i>
+      Live Active Emergency Calls ({{ active_alerts | length }})
+    </h3>
+  </div>
+
+  <div class="card-body" style="padding: 0;">
+    {% if active_alerts %}
+      <div style="display: flex; flex-direction: column;">
+        {% for a in active_alerts %}
+          <div style="padding: 24px; border-bottom: 1px solid #fecaca; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; background: #fff;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                <span style="font-size: 1.15rem; font-weight: 800; color: #dc2626;">
+                  <i class="fa-solid fa-triangle-exclamation"></i> {{ a.alert_type.upper() }} EMERGENCY
+                </span>
+                <span class="badge-status badge-cancelled">ACTIVE ALARM</span>
+              </div>
+              <div style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin-bottom: 4px;">
+                Location: Block {{ a.block }} - Flat {{ a.flat }}
+              </div>
+              <div style="font-size: 0.88rem; color: #475569;">
+                Resident: <strong>{{ a.resident_name }}</strong> • Contact: <strong style="color: #2563eb;">{{ a.resident_phone }}</strong>
+              </div>
+              {% if a.notes %}
+                <p style="font-size: 0.85rem; color: #991b1b; background: #fef2f2; padding: 8px 12px; border-radius: 6px; margin-top: 8px; font-weight: 600;">
+                  Notes: "{{ a.notes }}"
+                </p>
+              {% endif %}
+              <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 6px;">
+                Triggered: {{ a.created_at | datetime_format('%b %d, %Y - %I:%M:%S %p') }}
+              </div>
+            </div>
+
+            <!-- Resolve SOS Form -->
+            <div>
+              <form method="POST" action="{{ url_for('security.emergency') }}">
+                <input type="hidden" name="alert_id" value="{{ a.alert_id }}">
+                <button type="submit" class="btn btn-success" style="padding: 12px 20px; font-size: 0.95rem;">
+                  <i class="fa-solid fa-circle-check"></i> Mark Attended & Resolved
+                </button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 48px; color: var(--text-muted);">
+        <i class="fa-solid fa-shield-halved" style="font-size: 3rem; color: #10b981; margin-bottom: 12px;"></i>
+        <h4 style="color: #166534;">All Clear! No Active Emergency Alarms</h4>
+        <p style="font-size: 0.85rem;">Estate compound is safe and operational.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Past Resolved Emergency Incidents -->
+<div class="content-card">
+  <div class="card-header-bar">
+    <h3><i class="fa-solid fa-clock-rotate-left"></i> Resolved Emergency History</h3>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if resolved_alerts %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>Alert ID</th>
+              <th>Type</th>
+              <th>Flat</th>
+              <th>Resident</th>
+              <th>Triggered Time</th>
+              <th>Resolved By</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in resolved_alerts %}
+              <tr>
+                <td><strong>{{ r.alert_id }}</strong></td>
+                <td><strong style="color: #dc2626;">{{ r.alert_type }}</strong></td>
+                <td>Flat {{ r.flat }} (Block {{ r.block }})</td>
+                <td>{{ r.resident_name }}</td>
+                <td style="font-size: 0.8rem; color: #64748b;">{{ r.created_at | datetime_format }}</td>
+                <td>{{ r.resolved_by or 'Security Guard' }}</td>
+                <td>
+                  <span class="badge-status badge-approved">RESOLVED</span>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 32px; color: var(--text-muted);">
+        <p>No historical emergency records.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

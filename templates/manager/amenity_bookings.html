@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Amenity Bookings Review{% endblock %}
+{% block page_title %}Amenity Slot Conflict Verification & Approvals{% endblock %}
+{% block page_subtitle %}Review resident reservation requests, verify slot collisions, and grant official entry passes (Section 22){% endblock %}
+
+{% block content %}
+<!-- Verification Protocol Banner -->
+<div class="content-card" style="background: linear-gradient(135deg, #1e293b, #0f172a); color: #fff; margin-bottom: 24px;">
+  <div class="card-body" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(37, 99, 235, 0.3); color: #60a5fa; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+      <div>
+        <h3 style="font-size: 1.15rem; color: #fff; margin-bottom: 2px;">Manager Slot Verification Protocol</h3>
+        <p style="font-size: 0.85rem; color: #94a3b8;">
+          All resident requests remain in <strong>PENDING</strong> hold until verified by you. Verify the conflict analysis below. Approving issues the QR code pass and unlocks the resident's official slot receipt.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="content-card">
+  <div class="card-header-bar">
+    <h3><i class="fa-solid fa-calendar-check"></i> Reservation Requests & Conflict Audits</h3>
+  </div>
+
+  <div class="filter-bar">
+    <span style="font-size: 0.8rem; font-weight: 700; color: #475569;">Filter Status:</span>
+    <a href="{{ url_for('manager.amenity_bookings') }}" class="btn btn-sm {% if not active_status %}btn-primary{% else %}btn-secondary{% endif %}">All</a>
+    <a href="{{ url_for('manager.amenity_bookings', status='PENDING') }}" class="btn btn-sm {% if active_status == 'PENDING' %}btn-primary{% else %}btn-secondary{% endif %}">Pending Verification</a>
+    <a href="{{ url_for('manager.amenity_bookings', status='APPROVED') }}" class="btn btn-sm {% if active_status == 'APPROVED' %}btn-primary{% else %}btn-secondary{% endif %}">Approved</a>
+    <a href="{{ url_for('manager.amenity_bookings', status='REJECTED') }}" class="btn btn-sm {% if active_status == 'REJECTED' %}btn-primary{% else %}btn-secondary{% endif %}">Rejected</a>
+  </div>
+
+  <div class="card-body" style="padding: 0;">
+    {% if bookings %}
+      <div class="table-responsive">
+        <table class="portal-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Amenity</th>
+              <th>Resident & Unit</th>
+              <th>Date & Hours</th>
+              <th>Occasion / Guests</th>
+              <th>Conflict Verification Status</th>
+              <th>Status</th>
+              <th>Manager Approval Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for b in bookings %}
+              <tr>
+                <td><strong>{{ b.booking_id }}</strong></td>
+                <td>
+                  <strong style="color: #2563eb; font-size: 0.95rem;">{{ b.amenity_name }}</strong>
+                </td>
+                <td>
+                  <strong>{{ b.resident_name }}</strong>
+                  <span style="font-size: 0.75rem; color: #64748b; display: block;">Block {{ b.block }} - Flat {{ b.flat }}</span>
+                </td>
+                <td>
+                  <strong style="color: #0f172a;">{{ b.booking_date }}</strong>
+                  <span style="font-size: 0.78rem; color: #475569; display: block;">{{ b.start_time }} to {{ b.end_time }} ({{ b.duration_hours }} hrs)</span>
+                </td>
+                <td>
+                  <span style="font-weight: 600;">{{ b.purpose }}</span>
+                  <span style="font-size: 0.75rem; color: #64748b; display: block;">{{ b.guests_count }} Attendees</span>
+                </td>
+                <td style="max-width: 250px;">
+                  {% if b.status == 'PENDING' %}
+                    {% if b.conflict_check and b.conflict_check.has_conflict %}
+                      <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 6px 10px;">
+                        <span style="color: #dc2626; font-size: 0.75rem; font-weight: 800; display: block;">
+                          <i class="fa-solid fa-triangle-exclamation"></i> CONFLICT DETECTED
+                        </span>
+                        <span style="font-size: 0.75rem; color: #991b1b; line-height: 1.3; display: block; margin-top: 2px;">
+                          {{ b.conflict_check.message }}
+                        </span>
+                      </div>
+                    {% else %}
+                      <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 6px 10px;">
+                        <span style="color: #166534; font-size: 0.75rem; font-weight: 800; display: block;">
+                          <i class="fa-solid fa-circle-check"></i> VERIFIED: NO CONFLICT
+                        </span>
+                        <span style="font-size: 0.74rem; color: #065f46; display: block; margin-top: 2px;">
+                          Slot is completely clear of collisions.
+                        </span>
+                      </div>
+                    {% endif %}
+                  {% elif b.status == 'APPROVED' %}
+                    <span style="color: #166534; font-size: 0.78rem; font-weight: 700;">
+                      <i class="fa-solid fa-circle-check"></i> Slot Confirmed & Verified
+                    </span>
+                  {% else %}
+                    <span style="color: #94a3b8; font-size: 0.78rem;">Archived</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="badge-status badge-{{ b.status.lower() }}">
+                    {{ b.status }}
+                  </span>
+                </td>
+                <td>
+                  {% if b.status == 'PENDING' %}
+                    <div style="display: flex; gap: 6px;">
+                      <!-- Approve Form with conflict check handling -->
+                      {% if b.conflict_check and b.conflict_check.has_conflict and b.conflict_check.status == 'APPROVED_CONFLICT' %}
+                        <button type="button" class="btn btn-secondary btn-sm" disabled title="Cannot approve due to approved slot collision" style="opacity: 0.5; cursor: not-allowed;">
+                          <i class="fa-solid fa-ban"></i> Conflict Blocked
+                        </button>
+                      {% else %}
+                        <form method="POST" action="{{ url_for('manager.approve_amenity_booking', booking_id=b.booking_id) }}" style="display:inline;" onsubmit="return confirm('Verify & APPROVE slot for {{ b.resident_name }}?');">
+                          <button type="submit" class="btn btn-success btn-sm">
+                            <i class="fa-solid fa-check"></i> Approve
+                          </button>
+                        </form>
+                      {% endif %}
+
+                      <!-- Reject Form -->
+                      <form method="POST" action="{{ url_for('manager.reject_amenity_booking', booking_id=b.booking_id) }}" style="display:inline;">
+                        <input type="hidden" name="reason" value="Slot unavailable or conflicting booking.">
+                        <button type="submit" class="btn btn-danger btn-sm" title="Reject slot">
+                          <i class="fa-solid fa-xmark"></i> Reject
+                        </button>
+                      </form>
+                    </div>
+                  {% elif b.status == 'APPROVED' %}
+                    <span style="color: #166534; font-weight: 700; font-size: 0.8rem;">
+                      <i class="fa-solid fa-qrcode"></i> Approved (QR Issued)
+                    </span>
+                  {% else %}
+                    <span style="color: #94a3b8; font-size: 0.8rem;">{{ b.status }}</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 48px; color: var(--text-muted);">
+        <i class="fa-solid fa-calendar-check" style="font-size: 2.5rem; color: #10b981; margin-bottom: 12px;"></i>
+        <h4>No reservations found</h4>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

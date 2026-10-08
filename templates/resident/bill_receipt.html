@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Payment Receipt - {{ bill.bill_id }}{% endblock %}
+{% block page_title %}Maintenance Payment Receipt{% endblock %}
+{% block page_subtitle %}Official acknowledgement of settled society maintenance fees{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+  <a href="{{ url_for('resident.bills') }}" class="btn btn-secondary btn-sm">
+    <i class="fa-solid fa-arrow-left"></i> Back to Bills & Payments
+  </a>
+  <div style="display: flex; gap: 10px;">
+    <button onclick="window.print()" class="btn btn-secondary btn-sm">
+      <i class="fa-solid fa-print"></i> Print Receipt
+    </button>
+    <a href="{{ url_for('resident.download_bill_pdf', bill_id=bill.bill_id) }}" class="btn btn-primary btn-sm">
+      <i class="fa-solid fa-file-arrow-down"></i> Download PDF Receipt
+    </a>
+  </div>
+</div>
+
+<div class="receipt-wrapper">
+  <div class="receipt-header">
+    <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 12px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.4rem;">
+      <i class="fa-solid fa-receipt"></i>
+    </div>
+    <h2 style="font-family: var(--font-display); font-size: 1.35rem; color: #0f172a; margin-bottom: 2px;">GREENWOOD ESTATES</h2>
+    <p style="font-size: 0.85rem; color: #64748b; font-weight: 500;">Maintenance Payment Acknowledgement</p>
+    <div style="margin-top: 14px; display: inline-block; background: #ecfdf5; border: 1px solid #a7f3d0; color: #15803d; padding: 4px 16px; border-radius: 20px; font-weight: 700; font-size: 0.8rem; letter-spacing: 0.04em;">
+      <i class="fa-solid fa-circle-check"></i> PAYMENT COMPLETED & CONFIRMED
+    </div>
+  </div>
+
+  <div style="margin-top: 24px;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; background: #f8fafc; padding: 14px 18px; border-radius: 8px; margin-bottom: 20px;">
+      <div>
+        <span style="font-size: 0.72rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Payment Transaction ID</span>
+        <div style="font-weight: 700; font-size: 1rem; color: #0f172a;">{{ payment.payment_id if payment else 'PAY-CONFIRMED' }}</div>
+      </div>
+      <div>
+        <span style="font-size: 0.72rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Bill Reference</span>
+        <div style="font-weight: 700; font-size: 1rem; color: #2563eb;">{{ bill.bill_id }}</div>
+      </div>
+    </div>
+
+    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-bottom: 20px;">
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Resident Name</td>
+        <td style="padding: 10px 0; text-align: right; font-weight: 700;">{{ bill.resident_name }}</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Flat & Block</td>
+        <td style="padding: 10px 0; text-align: right; font-weight: 700;">Block {{ bill.block }} - Flat {{ bill.flat }}</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Billing Period</td>
+        <td style="padding: 10px 0; text-align: right; font-weight: 700;">{{ bill.month_year }}</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Payment Gateway Method</td>
+        <td style="padding: 10px 0; text-align: right; font-weight: 600;">{{ payment.payment_method if payment else 'ONLINE' }}</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Transaction Ref</td>
+        <td style="padding: 10px 0; text-align: right; font-family: monospace; font-size: 0.85rem; color: #475569;">
+          {{ payment.transaction_ref if payment else 'TXN-SETTLED' }}
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Settlement Date</td>
+        <td style="padding: 10px 0; text-align: right; font-size: 0.85rem; color: #475569;">
+          {{ bill.paid_at | datetime_format }}
+        </td>
+      </tr>
+    </table>
+
+    <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 10px;">Itemized Charge Breakdown</h4>
+    <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: 8px; padding: 14px 18px; margin-bottom: 24px;">
+      <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.85rem;">
+        <span style="color: #64748b;">Monthly Maintenance Charge:</span>
+        <span style="font-weight: 600;">₹{{ "{:,.2f}".format(bill.components.maintenance_charge) }}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.85rem;">
+        <span style="color: #64748b;">Water Supply & Sewage Charges:</span>
+        <span style="font-weight: 600;">₹{{ "{:,.2f}".format(bill.components.water_charge) }}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.85rem;">
+        <span style="color: #64748b;">Designated Parking Slot Fee:</span>
+        <span style="font-weight: 600;">₹{{ "{:,.2f}".format(bill.components.parking_charge) }}</span>
+      </div>
+      {% if bill.components.other_charge %}
+        <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.85rem;">
+          <span style="color: #64748b;">Other Community Amenities:</span>
+          <span style="font-weight: 600;">₹{{ "{:,.2f}".format(bill.components.other_charge) }}</span>
+        </div>
+      {% endif %}
+      <div style="display: flex; justify-content: space-between; padding: 10px 0 4px; border-top: 1px solid #cbd5e1; font-size: 1.1rem; font-weight: 800; color: #166534;">
+        <span>Total Paid:</span>
+        <span>₹{{ "{:,.2f}".format(bill.total_amount) }}</span>
+      </div>
+    </div>
+
+    <div style="text-align: center; font-size: 0.75rem; color: #94a3b8;">
+      Thank you for your prompt maintenance payment. This is a computer-generated confirmation.
+    </div>
+  </div>
+</div>
+{% endblock %}

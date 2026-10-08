@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Manager Dashboard{% endblock %}
+{% block page_title %}Operations Overview{% endblock %}
+{% block page_subtitle %}Central apartment management, service dispatch, and facility approvals{% endblock %}
+
+{% block content %}
+<!-- Active SOS alerts banner if any -->
+{% if active_alerts %}
+  <div style="background: #fef2f2; border: 2px solid #ef4444; border-radius: var(--radius-md); padding: 16px 20px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.8rem; color: #dc2626;"></i>
+      <div>
+        <h4 style="color: #991b1b; font-weight: 800; font-size: 1.05rem;">CRITICAL: Active SOS Emergency Alert Detected!</h4>
+        <p style="color: #b91c1c; font-size: 0.85rem;">
+          Flat {{ active_alerts[0].flat }} ({{ active_alerts[0].resident_name }}) raised a {{ active_alerts[0].alert_type }} alert.
+        </p>
+      </div>
+    </div>
+    <a href="{{ url_for('security.emergency') }}" class="btn btn-danger btn-sm">
+      View Emergency Console <i class="fa-solid fa-arrow-right"></i>
+    </a>
+  </div>
+{% endif %}
+
+<!-- Metric Cards Grid (Section 14) -->
+<div class="metrics-grid">
+  <!-- Total Residents -->
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Total Residents</h4>
+      <div class="metric-value">{{ summary.total_residents }}</div>
+      <div class="metric-sub">Active registered residents</div>
+    </div>
+    <div class="metric-icon-box box-blue">
+      <i class="fa-solid fa-users"></i>
+    </div>
+  </div>
+
+  <!-- Occupied Flats -->
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Occupied Flats</h4>
+      <div class="metric-value">{{ summary.occupied_flats }} / {{ summary.total_flats }}</div>
+      <div class="metric-sub">{{ summary.vacant_flats }} vacant units available</div>
+    </div>
+    <div class="metric-icon-box box-cyan">
+      <i class="fa-solid fa-building"></i>
+    </div>
+  </div>
+
+  <!-- Open Complaints -->
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Open Complaints</h4>
+      <div class="metric-value">{{ summary.open_complaints }}</div>
+      <div class="metric-sub">Pending / In-progress</div>
+    </div>
+    <div class="metric-icon-box box-rose">
+      <i class="fa-solid fa-screwdriver-wrench"></i>
+    </div>
+  </div>
+
+  <!-- Pending Amenity Bookings -->
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Pending Amenity Slots</h4>
+      <div class="metric-value">{{ summary.pending_bookings }}</div>
+      <div class="metric-sub">Awaiting approval</div>
+    </div>
+    <div class="metric-icon-box box-amber">
+      <i class="fa-solid fa-calendar-check"></i>
+    </div>
+  </div>
+
+  <!-- Active Technicians -->
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Staff Technicians</h4>
+      <div class="metric-value">{{ summary.total_technicians }}</div>
+      <div class="metric-sub">On-duty maintenance staff</div>
+    </div>
+    <div class="metric-icon-box box-indigo">
+      <i class="fa-solid fa-user-gear"></i>
+    </div>
+  </div>
+
+  <!-- Maintenance Collections -->
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Maintenance Collections</h4>
+      <div class="metric-value">₹{{ "{:,.0f}".format(summary.total_collected) }}</div>
+      <div class="metric-sub">Pending: ₹{{ "{:,.0f}".format(summary.total_pending) }}</div>
+    </div>
+    <div class="metric-icon-box box-emerald">
+      <i class="fa-solid fa-file-invoice-dollar"></i>
+    </div>
+  </div>
+
+  <!-- Community Collections -->
+  <div class="metric-card">
+    <div class="metric-info">
+      <h4>Community Drives</h4>
+      <div class="metric-value" style="color: #2563eb;">₹{{ "{:,.0f}".format(summary.total_comm_collected) }}</div>
+      <div class="metric-sub">
+        <a href="{{ url_for('community.manager_collections_list') }}" style="color: #2563eb; font-weight: 600; text-decoration: none;">
+          {{ summary.active_collections_count }} Active Drives &bull; View &rarr;
+        </a>
+      </div>
+    </div>
+    <div class="metric-icon-box box-blue">
+      <i class="fa-solid fa-layer-group"></i>
+    </div>
+  </div>
+</div>
+
+<!-- Two Columns: Pending Bookings & Unassigned Complaints -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+  <!-- Pending Amenity Requests (Section 22) -->
+  <div class="content-card">
+    <div class="card-header-bar">
+      <h3>
+        <i class="fa-solid fa-clock" style="color: #f59e0b;"></i>
+        Pending Amenity Bookings ({{ pending_bookings | length }})
+      </h3>
+      <a href="{{ url_for('manager.amenity_bookings') }}" class="btn btn-secondary btn-sm">All Bookings</a>
+    </div>
+    <div class="card-body" style="padding: 0;">
+      {% if pending_bookings %}
+        <div style="display: flex; flex-direction: column;">
+          {% for bk in pending_bookings %}
+            <div style="padding: 16px 20px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <strong style="font-size: 0.95rem; color: #0f172a;">{{ bk.amenity_name }}</strong>
+                  <span class="badge-status badge-pending">PENDING</span>
+                </div>
+                <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 2px;">
+                  Resident: <strong>{{ bk.resident_name }}</strong> (Flat {{ bk.flat }})
+                </div>
+                <div style="font-size: 0.8rem; color: #2563eb; font-weight: 600; margin-top: 2px;">
+                  <i class="fa-regular fa-calendar"></i> {{ bk.booking_date }} | {{ bk.start_time }} – {{ bk.end_time }}
+                </div>
+              </div>
+              <div style="display: flex; gap: 6px;">
+                <form method="POST" action="{{ url_for('manager.approve_amenity_booking', booking_id=bk.booking_id) }}" style="display:inline;">
+                  <button type="submit" class="btn btn-success btn-sm">
+                    <i class="fa-solid fa-check"></i> Approve
+                  </button>
+                </form>
+                <form method="POST" action="{{ url_for('manager.reject_amenity_booking', booking_id=bk.booking_id) }}" style="display:inline;">
+                  <button type="submit" class="btn btn-danger btn-sm">
+                    <i class="fa-solid fa-xmark"></i> Reject
+                  </button>
+                </form>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+          <i class="fa-solid fa-circle-check" style="font-size: 2rem; color: #10b981; margin-bottom: 8px;"></i>
+          <p style="font-size: 0.85rem;">No pending amenity booking requests.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Complaints Needing Attention -->
+  <div class="content-card">
+    <div class="card-header-bar">
+      <h3>
+        <i class="fa-solid fa-wrench" style="color: #ef4444;"></i>
+        Open Service Requests
+      </h3>
+      <a href="{{ url_for('manager.complaints') }}" class="btn btn-secondary btn-sm">Manage All</a>
+    </div>
+    <div class="card-body" style="padding: 0;">
+      {% if pending_complaints %}
+        <div style="display: flex; flex-direction: column;">
+          {% for c in pending_complaints %}
+            <div style="padding: 16px 20px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <strong style="color: #0f172a;">{{ c.complaint_id }} - {{ c.title }}</strong>
+                  <span class="badge-status badge-open">OPEN</span>
+                </div>
+                <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 2px;">
+                  Flat {{ c.flat }} • {{ c.category }} • {{ c.resident_name }}
+                </div>
+              </div>
+              <a href="{{ url_for('manager.complaints') }}" class="btn btn-primary btn-sm">
+                Assign Tech <i class="fa-solid fa-arrow-right"></i>
+              </a>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+          <i class="fa-solid fa-circle-check" style="font-size: 2rem; color: #10b981; margin-bottom: 8px;"></i>
+          <p style="font-size: 0.85rem;">No open unassigned complaints.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
