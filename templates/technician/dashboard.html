@@ -136,7 +136,11 @@
 
             <!-- Complete & Resolve Button -->
             <div>
-              <button type="button" class="btn btn-success" onclick="openResolveModal('{{ c.complaint_id }}', '{{ c.title }}', '{{ c.flat }}')">
+              <button type="button" class="btn btn-success" 
+                      data-complaint-id="{{ c.complaint_id }}"
+                      data-title="{{ c.title }}"
+                      data-flat="{{ c.flat }}"
+                      onclick="openResolveModal(this)">
                 <i class="fa-solid fa-circle-check"></i> Complete & Resolve Job
               </button>
             </div>
@@ -217,7 +221,10 @@
 
 {% block scripts %}
 <script>
-  function openResolveModal(complaintId, title, flat) {
+  function openResolveModal(btn) {
+    const complaintId = btn.dataset.complaintId || '';
+    const title = btn.dataset.title || '';
+    const flat = btn.dataset.flat || '';
     document.getElementById("resolveForm").action = `/technician/tasks/${complaintId}/complete`;
     document.getElementById("resolveComplaintTitle").innerText = `${complaintId}: ${title}`;
     document.getElementById("resolveComplaintFlat").innerText = `Flat ${flat}`;

@@ -26,8 +26,9 @@ def dashboard():
     db = get_db()
     user_id = session["user_id"]
     user = db.users.find_one({"user_id": user_id})
-
-    # Stats cards
+    if not user:
+        session.clear()
+        return redirect(url_for("auth.login"))
     pending_bill = db.bills.find_one({"resident_id": user_id, "status": "PENDING"})
     
     # Community Contributions
@@ -145,6 +146,8 @@ def family_members():
         return redirect(url_for("resident.family_members"))
 
     user = db.users.find_one({"user_id": user_id})
+    if not user:
+        return redirect(url_for("auth.login"))
     return render_template("resident/family.html", family_members=user.get("family_members", []))
 
 @resident_bp.route("/vehicles", methods=["GET", "POST"])
@@ -152,6 +155,8 @@ def vehicles():
     db = get_db()
     user_id = session["user_id"]
     user = db.users.find_one({"user_id": user_id})
+    if not user:
+        return redirect(url_for("auth.login"))
 
     if request.method == "POST":
         is_json = request.is_json or request.headers.get("Accept") == "application/json"
@@ -200,7 +205,7 @@ def vehicles():
             v["_id"] = str(v["_id"])
     if not resident_vehicles:
         # Check in user document
-        resident_vehicles = [v for v in user.get("vehicles", []) if v.get("status", "ACTIVE") == "ACTIVE"]
+        resident_vehicles = [v for v in (user.get("vehicles") or []) if v.get("status", "ACTIVE") == "ACTIVE"]
 
     parking_slots = get_parking_slots_status()
     return render_template("resident/vehicles.html", vehicles=resident_vehicles, parking_slots=parking_slots)

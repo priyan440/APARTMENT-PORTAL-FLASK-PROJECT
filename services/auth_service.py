@@ -160,6 +160,12 @@ def login_required(f):
         if "user_id" not in session:
             flash("Please log in to access this page.", "warning")
             return redirect(url_for("auth.login", next=request.url))
+        db = get_db()
+        user = db.users.find_one({"user_id": session.get("user_id"), "status": "ACTIVE"})
+        if not user:
+            session.clear()
+            flash("Session expired or user account not found. Please log in again.", "warning")
+            return redirect(url_for("auth.login"))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -170,10 +176,15 @@ def role_required(*roles):
             if "user_id" not in session:
                 flash("Please log in to access this page.", "warning")
                 return redirect(url_for("auth.login", next=request.url))
-            user_role = session.get("role")
+            db = get_db()
+            user = db.users.find_one({"user_id": session.get("user_id"), "status": "ACTIVE"})
+            if not user:
+                session.clear()
+                flash("Session expired or user account not found. Please log in again.", "warning")
+                return redirect(url_for("auth.login"))
+            user_role = user.get("role") or session.get("role")
             if user_role not in roles:
                 flash("Access denied. You are not authorized to view that page.", "danger")
-                # Redirect to appropriate dashboard based on their role
                 role_dashboards = {
                     "ADMIN": "admin.dashboard",
                     "MANAGER": "manager.dashboard",

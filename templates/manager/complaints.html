@@ -235,7 +235,18 @@
                 </td>
                 <td>
                   <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                    <button type="button" class="btn btn-secondary btn-sm" style="padding: 3px 8px; font-size: 0.75rem;" onclick="viewWorkReportDetails('{{ r.report_id }}', '{{ r.complaint_id }}', '{{ r.technician_name or r.technician_id }}', '{{ (r.work.summary if r.work else '')|replace(\"'\", \"\\'\") }}', '{{ (r.work.details if r.work else '')|replace(\"'\", \"\\'\") }}', '{{ (r.work.parts_used if r.work else [])|join(', ') }}', '{{ (r.work.remarks if r.work else '')|replace(\"'\", \"\\'\") }}', '{{ r.media.before_image_id if r.media else '' }}', '{{ r.media.after_image_id if r.media else '' }}', '{{ r.status }}')">
+                    <button type="button" class="btn btn-secondary btn-sm" style="padding: 3px 8px; font-size: 0.75rem;" 
+                      onclick="viewWorkReportDetails(this)"
+                      data-report-id="{{ r.report_id }}"
+                      data-complaint-id="{{ r.complaint_id }}"
+                      data-tech="{{ r.technician_name or r.technician_id }}"
+                      data-summary="{{ r.work.summary if r.work else '' }}"
+                      data-details="{{ r.work.details if r.work else '' }}"
+                      data-parts="{{ (r.work.parts_used if r.work else []) | join(', ') }}"
+                      data-remarks="{{ r.work.remarks if r.work else '' }}"
+                      data-before="{{ r.media.before_image_id if r.media else '' }}"
+                      data-after="{{ r.media.after_image_id if r.media else '' }}"
+                      data-status="{{ r.status }}">
                       <i class="fa-solid fa-eye"></i> View
                     </button>
                     {% if r.status != 'APPROVED' %}
@@ -531,33 +542,34 @@
     el.querySelector("input[type='radio']").checked = true;
   }
 
-  function viewWorkReportDetails(reportId, complaintId, techName, summary, details, parts, remarks, beforeId, afterId, status) {
-    document.getElementById("modalReportId").innerText = reportId;
-    document.getElementById("modalReportStatus").innerText = status;
-    document.getElementById("modalReportComplaintId").innerText = complaintId;
-    document.getElementById("modalReportTech").innerText = techName;
-    document.getElementById("modalReportSummary").innerText = summary || 'No summary provided';
-    document.getElementById("modalReportDetails").innerText = details || 'No details provided';
-    document.getElementById("modalReportParts").innerText = parts || 'None';
-    document.getElementById("modalReportRemarks").innerText = remarks || 'None';
+  function viewWorkReportDetails(btn) {
+    const d = btn.dataset;
+    document.getElementById("modalReportId").innerText = d.reportId || 'WR';
+    document.getElementById("modalReportStatus").innerText = d.status || 'SUBMITTED';
+    document.getElementById("modalReportComplaintId").innerText = d.complaintId || '';
+    document.getElementById("modalReportTech").innerText = d.tech || '';
+    document.getElementById("modalReportSummary").innerText = d.summary || 'No summary provided';
+    document.getElementById("modalReportDetails").innerText = d.details || 'No details provided';
+    document.getElementById("modalReportParts").innerText = d.parts || 'None';
+    document.getElementById("modalReportRemarks").innerText = d.remarks || 'None';
 
     const imgContainer = document.getElementById("modalReportImages");
     imgContainer.innerHTML = '';
     let hasImages = false;
 
-    if (beforeId) {
+    if (d.before) {
       hasImages = true;
       const bLink = document.createElement('a');
-      bLink.href = `/media/${beforeId}`;
+      bLink.href = `/media/${d.before}`;
       bLink.target = '_blank';
       bLink.className = 'btn btn-secondary btn-sm';
       bLink.innerHTML = '<i class="fa-solid fa-image"></i> View Before Photo';
       imgContainer.appendChild(bLink);
     }
-    if (afterId) {
+    if (d.after) {
       hasImages = true;
       const aLink = document.createElement('a');
-      aLink.href = `/media/${afterId}`;
+      aLink.href = `/media/${d.after}`;
       aLink.target = '_blank';
       aLink.className = 'btn btn-secondary btn-sm';
       aLink.innerHTML = '<i class="fa-solid fa-image"></i> View After Photo';

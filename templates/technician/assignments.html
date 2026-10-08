@@ -65,7 +65,11 @@
                       <button type="submit" class="btn btn-primary btn-sm">Start Work</button>
                     </form>
                   {% elif t.status == 'IN_PROGRESS' %}
-                    <button type="button" class="btn btn-success btn-sm" onclick="openResolveModal('{{ t.complaint_id }}', '{{ t.title|replace(\"'\", \"\\'\") }}', '{{ t.flat }}')">
+                    <button type="button" class="btn btn-success btn-sm" 
+                      onclick="openResolveModal(this)"
+                      data-complaint-id="{{ t.complaint_id }}"
+                      data-title="{{ t.title }}"
+                      data-flat="{{ t.flat }}">
                       <i class="fa-solid fa-clipboard-check"></i> Complete
                     </button>
                   {% else %}
@@ -151,10 +155,11 @@
 
 {% block scripts %}
 <script>
-  function openResolveModal(complaintId, title, flat) {
-    document.getElementById("resolveForm").action = `/technician/tasks/${complaintId}/complete`;
-    document.getElementById("resolveComplaintTitle").innerText = `${complaintId}: ${title}`;
-    document.getElementById("resolveComplaintFlat").innerText = `Flat ${flat}`;
+  function openResolveModal(btn) {
+    const d = btn.dataset;
+    document.getElementById("resolveForm").action = `/technician/tasks/${d.complaintId}/complete`;
+    document.getElementById("resolveComplaintTitle").innerText = `${d.complaintId}: ${d.title}`;
+    document.getElementById("resolveComplaintFlat").innerText = `Flat ${d.flat}`;
     openModal("resolveModal");
   }
 </script>
