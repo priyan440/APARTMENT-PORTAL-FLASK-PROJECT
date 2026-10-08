@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apartment Residential Management Portal — Smart, Secure & Connected Living</title>
+  <meta name="description" content="A centralized digital platform for managing your apartment community, residents, services, amenities, security, vendors, payments, and residential operations.">
+  
+  <!-- Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --primary-light: #60a5fa;
+      --accent: #0ea5e9;
+      --accent-purple: #7c3aed;
+      --dark-bg: #0b0f19;
+      --dark-card: #111827;
+      --dark-border: #1f2937;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      --light-bg: #f8fafc;
+      --white: #ffffff;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+      --shadow-glow: 0 0 30px rgba(37, 99, 235, 0.2);
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text-main);
+      background-color: #ffffff;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* -------------------------------------------------------------
+       NAVBAR
+    ------------------------------------------------------------- */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: rgba(11, 15, 25, 0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 16px 0;
+      transition: var(--transition);
+    }
+
+    .nav-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(135deg, #2563eb, #0ea5e9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 1.15rem;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+    }
+
+    .nav-menu {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      list-style: none;
+    }
+
+    .nav-link {
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: #94a3b8;
+      transition: var(--transition);
+      position: relative;
+    }
+
+    .nav-link:hover {
+      color: #ffffff;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 10px 22px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: var(--transition);
+      border: 1px solid transparent;
+    }
+
+    .btn-outline-nav {
+      background: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+    .btn-outline-nav:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary-nav {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+    }
+    .btn-primary-nav:hover {
+      background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.55);
+      transform: translateY(-1px);
+    }
+
+    /* -------------------------------------------------------------
+       1. HERO SECTION
+    ------------------------------------------------------------- */
+    .hero-section {
+      position: relative;
+      min-height: 100vh;
+      background: #0b0f19;
+      background-image: 
+        radial-gradient(at 10% 20%, rgba(37, 99, 235, 0.22) 0px, transparent 50%),
+        radial-gradient(at 90% 30%, rgba(124, 58, 237, 0.18) 0px, transparent 50%),
+        radial-gradient(at 50% 80%, rgba(14, 165, 233, 0.15) 0px, transparent 50%),
+        linear-gradient(rgba(11, 15, 25, 0.72), rgba(11, 15, 25, 0.95)),
+        url('https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=2000&q=80');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      display: flex;
+      align-items: center;
+      padding: 140px 0 100px;
+      color: #ffffff;
+    }
+
+    .hero-content {
+      max-width: 780px;
+      text-align: center;
+      margin: 0 auto;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: rgba(37, 99, 235, 0.16);
+      border: 1px solid rgba(96, 165, 250, 0.3);
+      border-radius: var(--radius-full);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #60a5fa;
+      margin-bottom: 24px;
+      backdrop-filter: blur(8px);
+    }
+
+    .hero-badge i {
+      color: #38bdf8;
+    }
+
+    .hero-title {
+      font-size: 3.5rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 20px;
+      line-height: 1.15;
+    }
+
+    .hero-title span {
+      background: linear-gradient(135deg, #60a5fa 0%, #38bdf8 50%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-tagline {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-bottom: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    .hero-desc {
+      font-size: 1.05rem;
+      color: #94a3b8;
+      margin-bottom: 36px;
+      line-height: 1.7;
+      max-width: 680px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .hero-buttons {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn-hero-primary {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: #ffffff;
+      padding: 14px 32px;
+      font-size: 1.05rem;
+      border-radius: var(--radius-sm);
+      box-shadow: 0 8px 24px rgba(37, 99, 235, 0.45);
+    }
+    .btn-hero-primary:hover {
+      background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+      box-shadow: 0 12px 30px rgba(37, 99, 235, 0.6);
+      transform: translateY(-2px);
+    }
+
+    .btn-hero-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 14px 28px;
+      font-size: 1.05rem;
+      border-radius: var(--radius-sm);
+      backdrop-filter: blur(8px);
+    }
+    .btn-hero-secondary:hover {
+      background: rgba(255, 255, 255, 0.16);
+      border-color: rgba(255, 255, 255, 0.35);
+      transform: translateY(-2px);
+    }
+
+    /* -------------------------------------------------------------
+       2. KEY STATISTICS
+    ------------------------------------------------------------- */
+    .stats-section {
+      background: #0f172a;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 40px 0;
+      position: relative;
+      z-index: 10;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+    }
+
+    .stat-card {
+      text-align: center;
+      padding: 20px;
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .stat-card:last-child {
+      border-right: none;
+    }
+
+    .stat-num {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2.8rem;
+      font-weight: 800;
+      color: #ffffff;
+      background: linear-gradient(135deg, #60a5fa 0%, #38bdf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* -------------------------------------------------------------
+       COMMON SECTION HEADINGS
+    ------------------------------------------------------------- */
+    .section-py {
+      padding: 90px 0;
+    }
+
+    .section-header {
+      text-align: center;
+      max-width: 680px;
+      margin: 0 auto 56px;
+    }
+
+    .section-tag {
+      display: inline-block;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #2563eb;
+      margin-bottom: 8px;
+    }
+
+    .section-title {
+      font-size: 2.4rem;
+      color: #0f172a;
+      margin-bottom: 14px;
+      letter-spacing: -0.5px;
+    }
+
+    .section-desc {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+    }
+
+    /* -------------------------------------------------------------
+       3. FEATURES SECTION
+    ------------------------------------------------------------- */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+    }
+
+    .feature-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: var(--radius-md);
+      padding: 30px 24px;
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-lg);
+      border-color: #cbd5e1;
+    }
+
+    .feature-icon-box {
+      width: 52px;
+      height: 52px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.35rem;
+      margin-bottom: 20px;
+    }
+
+    .icon-blue   { background: #eff6ff; color: #2563eb; }
+    .icon-indigo { background: #eef2ff; color: #4f46e5; }
+    .icon-emerald{ background: #ecfdf5; color: #059669; }
+    .icon-amber  { background: #fffbeb; color: #d97706; }
+    .icon-purple { background: #faf5ff; color: #9333ea; }
+    .icon-rose   { background: #fff1f2; color: #e11d48; }
+    .icon-cyan   { background: #ecfeff; color: #0891b2; }
+    .icon-teal   { background: #f0fdfa; color: #0d9488; }
+
+    .feature-title {
+      font-size: 1.2rem;
+      color: #0f172a;
+      margin-bottom: 10px;
+    }
+
+    .feature-desc {
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* -------------------------------------------------------------
+       4. HOW IT WORKS
+    ------------------------------------------------------------- */
+    .how-it-works-section {
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      position: relative;
+    }
+
+    .step-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: var(--radius-md);
+      padding: 32px 24px;
+      text-align: center;
+      position: relative;
+      transition: var(--transition);
+    }
+    .step-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .step-badge {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #2563eb, #0ea5e9);
+      color: #ffffff;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
+    .step-title {
+      font-size: 1.15rem;
+      color: #0f172a;
+      margin-bottom: 8px;
+    }
+
+    .step-desc {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    /* -------------------------------------------------------------
+       5. ROLE-BASED ACCESS
+    ------------------------------------------------------------- */
+    .roles-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 20px;
+    }
+
+    .role-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: var(--radius-md);
+      padding: 28px 20px;
+      text-align: center;
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .role-card:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-lg);
+      border-color: #2563eb;
+    }
+
+    .role-avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+    }
+
+    .role-name {
+      font-size: 1.25rem;
+      color: #0f172a;
+      margin-bottom: 8px;
+    }
+
+    .role-desc {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .role-action {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #2563eb;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* -------------------------------------------------------------
+       6. SMART MANAGEMENT
+    ------------------------------------------------------------- */
+    .smart-section {
+      background: #0b0f19;
+      color: #ffffff;
+    }
+
+    .smart-section .section-title {
+      color: #ffffff;
+    }
+    .smart-section .section-tag {
+      color: #60a5fa;
+    }
+    .smart-section .section-desc {
+      color: #94a3b8;
+    }
+
+    .smart-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .smart-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-md);
+      padding: 30px;
+      transition: var(--transition);
+      backdrop-filter: blur(12px);
+    }
+    .smart-card:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(96, 165, 250, 0.4);
+      transform: translateY(-4px);
+    }
+
+    .smart-icon {
+      font-size: 1.8rem;
+      color: #38bdf8;
+      margin-bottom: 16px;
+    }
+
+    .smart-title {
+      font-size: 1.25rem;
+      color: #ffffff;
+      margin-bottom: 10px;
+    }
+
+    .smart-desc {
+      font-size: 0.92rem;
+      color: #94a3b8;
+      line-height: 1.6;
+    }
+
+    /* -------------------------------------------------------------
+       7. COMMUNITY & 8. SECURITY SECTIONS
+    ------------------------------------------------------------- */
+    .two-col-showcase {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: center;
+    }
+
+    .showcase-pill-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .showcase-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .showcase-pill i {
+      color: #2563eb;
+    }
+
+    .showcase-card-stack {
+      background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%);
+      border: 1px solid #bfdbfe;
+      border-radius: var(--radius-lg);
+      padding: 36px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .security-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .security-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: var(--radius-md);
+      padding: 24px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      transition: var(--transition);
+    }
+    .security-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: #3b82f6;
+    }
+
+    .security-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-sm);
+      background: #fef2f2;
+      color: #dc2626;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    /* -------------------------------------------------------------
+       9. CALL TO ACTION
+    ------------------------------------------------------------- */
+    .cta-section {
+      background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #0284c7 100%);
+      color: #ffffff;
+      text-align: center;
+      padding: 80px 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-title {
+      font-size: 2.8rem;
+      font-weight: 800;
+      margin-bottom: 16px;
+      color: #ffffff;
+    }
+
+    .cta-desc {
+      font-size: 1.15rem;
+      color: #dbeafe;
+      max-width: 640px;
+      margin: 0 auto 36px;
+    }
+
+    .btn-cta {
+      background: #ffffff;
+      color: #1e40af;
+      font-size: 1.1rem;
+      font-weight: 700;
+      padding: 16px 36px;
+      border-radius: var(--radius-sm);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+    .btn-cta:hover {
+      background: #f8fafc;
+      color: #1d4ed8;
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
+    }
+
+    /* -------------------------------------------------------------
+       10. FOOTER
+    ------------------------------------------------------------- */
+    .footer {
+      background: #0b0f19;
+      color: #94a3b8;
+      padding: 60px 0 30px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 48px;
+      margin-bottom: 48px;
+    }
+
+    .footer-brand h3 {
+      color: #ffffff;
+      font-size: 1.35rem;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .footer-links h4 {
+      color: #ffffff;
+      font-size: 1rem;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .footer-links ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .footer-links a:hover {
+      color: #ffffff;
+    }
+
+    .tech-pill {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      margin: 0 4px 6px 0;
+      color: #cbd5e1;
+    }
+
+    .footer-bottom {
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 24px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: #64748b;
+    }
+
+    /* -------------------------------------------------------------
+       RESPONSIVE BREAKPOINTS
+    ------------------------------------------------------------- */
+    @media (max-width: 1024px) {
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+      .roles-grid { grid-template-columns: repeat(3, 1fr); }
+      .smart-grid { grid-template-columns: repeat(2, 1fr); }
+      .security-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 768px) {
+      .hero-title { font-size: 2.5rem; }
+      .nav-menu { display: none; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .stat-card { border-right: none; }
+      .steps-grid { grid-template-columns: 1fr; }
+      .roles-grid { grid-template-columns: 1fr; }
+      .smart-grid { grid-template-columns: 1fr; }
+      .two-col-showcase { grid-template-columns: 1fr; }
+      .security-grid { grid-template-columns: 1fr; }
+      .footer-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =============================================================
+       NAVBAR
+  ============================================================= -->
+  <header class="navbar">
+    <div class="container nav-container">
+      <a href="#home" class="nav-brand">
+        <div class="brand-icon">
+          <i class="fa-solid fa-building-user"></i>
+        </div>
+        <span>Greenwood Portal</span>
+      </a>
+
+      <nav>
+        <ul class="nav-menu">
+          <li><a href="#home" class="nav-link">Home</a></li>
+          <li><a href="#features" class="nav-link">Features</a></li>
+          <li><a href="#how-it-works" class="nav-link">How It Works</a></li>
+          <li><a href="#roles" class="nav-link">Roles</a></li>
+          <li><a href="#community" class="nav-link">Community</a></li>
+          <li><a href="#security" class="nav-link">Security</a></li>
+          <li><a href="#contact" class="nav-link">Contact</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        {% if session.get('user_id') %}
+          <a href="{{ url_for('auth.role_dashboard_redirect') }}" class="btn btn-primary-nav">
+            <i class="fa-solid fa-gauge-high"></i> Dashboard
+          </a>
+        {% else %}
+          <a href="{{ url_for('auth.register') }}" class="btn btn-outline-nav">
+            <i class="fa-solid fa-user-plus"></i> Get Started
+          </a>
+          <a href="{{ url_for('auth.login') }}" class="btn btn-primary-nav">
+            <i class="fa-solid fa-right-to-bracket"></i> Login
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+  <!-- =============================================================
+       1. HERO SECTION
+  ============================================================= -->
+  <section id="home" class="hero-section">
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <i class="fa-solid fa-shield-halved"></i> Smart. Secure. Connected Living.
+        </div>
+
+        <h1 class="hero-title">
+          Manage Your Apartment Community <span>Smarter</span>
+        </h1>
+
+        <div class="hero-tagline">
+          Centralized Residential Management Platform
+        </div>
+
+        <p class="hero-desc">
+          A complete digital solution that connects residents, apartment managers, technicians, security personnel, and administrators through one centralized platform.
+        </p>
+
+        <div class="hero-buttons">
+          <a href="{{ url_for('auth.login') }}" class="btn btn-hero-primary">
+            <i class="fa-solid fa-right-to-bracket"></i> Login to Portal
+          </a>
+          <a href="#features" class="btn btn-hero-secondary">
+            <i class="fa-solid fa-compass"></i> Explore Features
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================================
+       2. KEY STATISTICS
+  ============================================================= -->
+  <section class="stats-section">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-num">500+</div>
+          <div class="stat-label">Residents</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">50+</div>
+          <div class="stat-label">Apartment Units</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">20+</div>
+          <div class="stat-label">Services</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">24/7</div>
+          <div class="stat-label">Security Support</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================================
+       3. FEATURES SECTION
+  ============================================================= -->
+  <section id="features" class="section-py">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Powerful Capabilities</span>
+        <h2 class="section-title">Everything Your Apartment Needs</h2>
+        <p class="section-desc">
+          Unified management tools tailored to modern residential communities, gated societies, and apartments.
+        </p>
+      </div>
+
+      <div class="features-grid">
+        <!-- Card 1 -->
+        <div class="feature-card">
+          <div class="feature-icon-box icon-blue">
+            <i class="fa-solid fa-users"></i>
+          </div>
+          <h3 class="feature-title">Resident Management</h3>
+          <p class="feature-desc">
+            Manage resident profiles, family members, vehicles, and apartment information from one place.
+          </p>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="feature-card">
+          <div class="feature-icon-box icon-rose">
+            <i class="fa-solid fa-screwdriver-wrench"></i>
+          </div>
+          <h3 class="feature-title">Complaint Management</h3>
+          <p class="feature-desc">
+            Register complaints, assign technicians, track service progress, and monitor completed work.
+          </p>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="feature-card">
+          <div class="feature-icon-box icon-emerald">
+            <i class="fa-solid fa-calendar-check"></i>
+          </div>
+          <h3 class="feature-title">Amenity Booking</h3>
+          <p class="feature-desc">
+            Book swimming pools, tennis courts, community halls, gyms, and other apartment facilities with conflict-free scheduling.
+          </p>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="feature-card">
+          <div class="feature-icon-box icon-indigo">
+            <i class="fa-solid fa-square-parking"></i>
+          </div>
+          <h3 class="feature-title">Parking Management</h3>
+          <p class="feature-desc">
+            Manage vehicles and parking slots while preventing duplicate parking assignments.
+          </p>
+        </div>
+
+        <!-- Card 5 -->
+        <div class="feature-card">
+          <div class="feature-icon-box icon-amber">
+            <i class="fa-solid fa-id-card-clip"></i>
+          </div>
+          <h3 class="feature-title">Visitor Management</h3>
+          <p class="feature-desc">
+            Track visitor entry and exit, approvals, and security records digitally.
+          </p>
+        </div>
+
+        <!-- Card 6 -->
+        <div class="feature-card">
+          <div class="feature-icon-box icon-purple">
+            <i class="fa-solid fa-hand-holding-hand"></i>
+          </div>
+          <h3 class="feature-title">Daily Help Management</h3>
+          <p class="feature-desc">
+            Manage maids, cooks, drivers, cleaners, and other domestic help with approval and attendance tracking.
+          </p>
+        </div>
+
+        <!-- Card 7 -->
+        <div class="feature-card">
+          <div class="feature-icon-box icon-cyan">
+            <i class="fa-solid fa-truck-field"></i>
+          </div>
+          <h3 class="feature-title">Vendor Management</h3>
+          <p class="feature-desc">
+            Manage apartment vendors, contracts, service requests, invoices, payments, and service history.
+          </p>
+        </div>
+
+        <!-- Card 8 -->
+        <div class="feature-card">
+          <div class="feature-icon-box icon-teal">
+            <i class="fa-solid fa-file-invoice-dollar"></i>
+          </div>
+          <h3 class="feature-title">Financial Management</h3>
+          <p class="feature-desc">
+            Track maintenance bills, community contributions, vendor payments, receipts, and payment status.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================================
+       4. HOW IT WORKS
+  ============================================================= -->
+  <section id="how-it-works" class="section-py how-it-works-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Seamless Onboarding</span>
+        <h2 class="section-title">How It Works</h2>
+        <p class="section-desc">
+          Four easy steps to streamline your residential living and management experience.
+        </p>
+      </div>
+
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-badge">1</div>
+          <h3 class="step-title">Register or Login</h3>
+          <p class="step-desc">Create your resident profile or sign in with your authorized credentials.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">2</div>
+          <h3 class="step-title">Access Role Dashboard</h3>
+          <p class="step-desc">Get tailored tools for Resident, Manager, Admin, Technician, or Security.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">3</div>
+          <h3 class="step-title">Manage Services</h3>
+          <p class="step-desc">Book amenities, raise complaints, pay bills, and register visitors seamlessly.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">4</div>
+          <h3 class="step-title">Track & Settle</h3>
+          <p class="step-desc">Receive real-time updates, verify gate passes, and monitor activities.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================================
+       5. ROLE-BASED ACCESS SECTION
+  ============================================================= -->
+  <section id="roles" class="section-py">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Customized Experience</span>
+        <h2 class="section-title">One Platform. Different Roles. Complete Control.</h2>
+        <p class="section-desc">
+          Role-specific workspaces designed for speed, clarity, and security.
+        </p>
+      </div>
+
+      <div class="roles-grid">
+        <!-- Admin -->
+        <div class="role-card">
+          <div>
+            <div class="role-avatar" style="background: #eff6ff; color: #2563eb;">
+              <i class="fa-solid fa-user-shield"></i>
+            </div>
+            <h3 class="role-name">Admin</h3>
+            <p class="role-desc">
+              Complete control over users, apartments, vendors, finances, reports, and system settings.
+            </p>
+          </div>
+          <a href="{{ url_for('auth.login') }}" class="role-action">
+            Portal Login <i class="fa-solid fa-arrow-right"></i>
+          </a>
+        </div>
+
+        <!-- Manager -->
+        <div class="role-card">
+          <div>
+            <div class="role-avatar" style="background: #faf5ff; color: #7c3aed;">
+              <i class="fa-solid fa-user-tie"></i>
+            </div>
+            <h3 class="role-name">Manager</h3>
+            <p class="role-desc">
+              Manage residents, complaints, amenities, vendors, payments, announcements, and operations.
+            </p>
+          </div>
+          <a href="{{ url_for('auth.login') }}" class="role-action">
+            Portal Login <i class="fa-solid fa-arrow-right"></i>
+          </a>
+        </div>
+
+        <!-- Resident -->
+        <div class="role-card">
+          <div>
+            <div class="role-avatar" style="background: #ecfdf5; color: #059669;">
+              <i class="fa-solid fa-house-user"></i>
+            </div>
+            <h3 class="role-name">Resident</h3>
+            <p class="role-desc">
+              Manage your profile, family, vehicles, complaints, bookings, payments, visitors, and daily help.
+            </p>
+          </div>
+          <a href="{{ url_for('auth.login') }}" class="role-action">
+            Portal Login <i class="fa-solid fa-arrow-right"></i>
+          </a>
+        </div>
+
+        <!-- Technician -->
+        <div class="role-card">
+          <div>
+            <div class="role-avatar" style="background: #fffbeb; color: #d97706;">
+              <i class="fa-solid fa-wrench"></i>
+            </div>
+            <h3 class="role-name">Technician</h3>
+            <p class="role-desc">
+              View assigned complaints, update service status, submit work reports, and upload before/after images.
+            </p>
+          </div>
+          <a href="{{ url_for('auth.login') }}" class="role-action">
+            Portal Login <i class="fa-solid fa-arrow-right"></i>
+          </a>
+        </div>
+
+        <!-- Security -->
+        <div class="role-card">
+          <div>
+            <div class="role-avatar" style="background: #fff1f2; color: #e11d48;">
+              <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <h3 class="role-name">Security</h3>
+            <p class="role-desc">
+              Manage visitors, vehicles, deliveries, daily help attendance, and emergency activities.
+            </p>
+          </div>
+          <a href="{{ url_for('auth.login') }}" class="role-action">
+            Portal Login <i class="fa-solid fa-arrow-right"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================================
+       6. SMART MANAGEMENT SECTION
+  ============================================================= -->
+  <section class="section-py smart-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Intelligent Automation</span>
+        <h2 class="section-title">Designed for Smarter Apartment Management</h2>
+        <p class="section-desc">
+          Automated conflict resolution, verifiable proof storage, and instant data transparency.
+        </p>
+      </div>
+
+      <div class="smart-grid">
+        <div class="smart-card">
+          <div class="smart-icon"><i class="fa-solid fa-car-tunnel"></i></div>
+          <h3 class="smart-title">Conflict-Free Parking</h3>
+          <p class="smart-desc">
+            Prevent duplicate parking assignments automatically with MongoDB unique partial indexes on active vehicles.
+          </p>
+        </div>
+
+        <div class="smart-card">
+          <div class="smart-icon"><i class="fa-solid fa-calendar-days"></i></div>
+          <h3 class="smart-title">Smart Amenity Booking</h3>
+          <p class="smart-desc">
+            Prevent overlapping bookings with automated slot conflict checks and streamlined management approvals.
+          </p>
+        </div>
+
+        <div class="smart-card">
+          <div class="smart-icon"><i class="fa-solid fa-clipboard-check"></i></div>
+          <h3 class="smart-title">Digital Complaints</h3>
+          <p class="smart-desc">
+            Track every maintenance issue end-to-end with technician dispatch, parts logging, and manager work sign-off.
+          </p>
+        </div>
+
+        <div class="smart-card">
+          <div class="smart-icon"><i class="fa-solid fa-file-shield"></i></div>
+          <h3 class="smart-title">Secure Documents</h3>
+          <p class="smart-desc">
+            Store contracts, PDFs, identity proofs, photos, and inspection videos securely via MongoDB GridFS.
+          </p>
+        </div>
+
+        <div class="smart-card">
+          <div class="smart-icon"><i class="fa-solid fa-chart-line"></i></div>
+          <h3 class="smart-title">Real-Time Analytics</h3>
+          <p class="smart-desc">
+            Interactive metrics for revenue, maintenance workloads, resident ratings, and facility occupancy rates.
+          </p>
+        </div>
+
+        <div class="smart-card">
+          <div class="smart-icon"><i class="fa-solid fa-bell"></i></div>
+          <h3 class="smart-title">Instant Notifications</h3>
+          <p class="smart-desc">
+            Real-time gate arrival alerts, payment reminders, and emergency broadcasts sent directly to residents.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================================
+       7. COMMUNITY SECTION
+  ============================================================= -->
+  <section id="community" class="section-py">
+    <div class="container">
+      <div class="two-col-showcase">
+        <div>
+          <span class="section-tag">Social & Collaborative</span>
+          <h2 class="section-title">Build a Better Connected Community</h2>
+          <p class="section-desc">
+            Keep residents informed and connected through announcements, community events, polls, festival contributions, apartment tours, emergency notifications, and other community activities.
+          </p>
+          <div class="showcase-pill-list">
+            <span class="showcase-pill"><i class="fa-solid fa-bullhorn"></i> Society Announcements</span>
+            <span class="showcase-pill"><i class="fa-solid fa-hand-holding-dollar"></i> Community Collections</span>
+            <span class="showcase-pill"><i class="fa-solid fa-users-viewfinder"></i> Resident Directory</span>
+            <span class="showcase-pill"><i class="fa-solid fa-receipt"></i> Digital Receipts & QR Codes</span>
+          </div>
+        </div>
+        <div class="showcase-card-stack">
+          <h3 style="font-size: 1.4rem; color: #0f172a; margin-bottom: 12px;">
+            <i class="fa-solid fa-heart" style="color: #ef4444;"></i> Greenwood Residential Community
+          </h3>
+          <p style="font-size: 0.95rem; color: #475569; margin-bottom: 20px;">
+            Modern community living with seamless communication between society committees, residents, and facility vendors.
+          </p>
+          <div style="background: #ffffff; border-radius: 10px; padding: 16px; border: 1px solid #bfdbfe; font-size: 0.88rem; color: #1e293b;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <strong>Diwali Celebration Fund 2026</strong>
+              <span style="background: #dcfce7; color: #166534; font-weight: 700; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;">ACTIVE</span>
+            </div>
+            <p style="font-size: 0.8rem; color: #64748b; margin: 0;">₹1,500 / flat contribution • Automated QR code receipt generation</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================================
+       8. SECURITY SECTION
+  ============================================================= -->
+  <section id="security" class="section-py" style="background: #f8fafc; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">24/7 Gate Protection</span>
+        <h2 class="section-title">Safety and Security at Every Gate</h2>
+        <p class="section-desc">
+          Digital verification systems ensuring complete peace of mind for every resident and family member.
+        </p>
+      </div>
+
+      <div class="security-grid">
+        <div class="security-card">
+          <div class="security-icon"><i class="fa-solid fa-person-walking-dashed-line-arrow-right"></i></div>
+          <div>
+            <h4 style="font-size: 1.05rem; color: #0f172a; margin-bottom: 4px;">Visitor Check-In / Check-Out</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Real-time logging of visitors, passcode verification, and entry approval.</p>
+          </div>
+        </div>
+
+        <div class="security-card">
+          <div class="security-icon"><i class="fa-solid fa-car"></i></div>
+          <div>
+            <h4 style="font-size: 1.05rem; color: #0f172a; margin-bottom: 4px;">Vehicle Tracking</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Instant license plate lookup and parking slot authorization verification.</p>
+          </div>
+        </div>
+
+        <div class="security-card">
+          <div class="security-icon"><i class="fa-solid fa-box-open"></i></div>
+          <div>
+            <h4 style="font-size: 1.05rem; color: #0f172a; margin-bottom: 4px;">Delivery Management</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Track e-commerce, food, and parcel deliveries with resident pickup notices.</p>
+          </div>
+        </div>
+
+        <div class="security-card">
+          <div class="security-icon"><i class="fa-solid fa-clipboard-user"></i></div>
+          <div>
+            <h4 style="font-size: 1.05rem; color: #0f172a; margin-bottom: 4px;">Daily Help Attendance</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Single-click entry/exit timestamp recording with immediate resident notification.</p>
+          </div>
+        </div>
+
+        <div class="security-card">
+          <div class="security-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+          <div>
+            <h4 style="font-size: 1.05rem; color: #0f172a; margin-bottom: 4px;">Emergency / SOS</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">One-touch resident emergency alerts for medical, fire, or lift situations.</p>
+          </div>
+        </div>
+
+        <div class="security-card">
+          <div class="security-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+          <div>
+            <h4 style="font-size: 1.05rem; color: #0f172a; margin-bottom: 4px;">Security Activity Logs</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Tamper-evident audit trail of all gate movements and system operations.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================================
+       9. CALL TO ACTION SECTION
+  ============================================================= -->
+  <section class="cta-section">
+    <div class="container">
+      <h2 class="cta-title">Make Your Apartment Management Smarter Today</h2>
+      <p class="cta-desc">
+        Bring residents, management, technicians, vendors, and security together on one centralized platform.
+      </p>
+      <a href="{{ url_for('auth.login') }}" class="btn btn-cta">
+        <i class="fa-solid fa-building"></i> Enter Apartment Portal
+      </a>
+    </div>
+  </section>
+
+  <!-- =============================================================
+       10. FOOTER
+  ============================================================= -->
+  <footer id="contact" class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <h3>
+            <div class="brand-icon" style="width: 32px; height: 32px; font-size: 0.95rem;">
+              <i class="fa-solid fa-building-user"></i>
+            </div>
+            Apartment Management Portal
+          </h3>
+          <p style="font-size: 0.92rem; margin-bottom: 16px; color: #94a3b8;">
+            Smart Management. Better Living. A modern solution for residential towers, apartment complexes, and gated housing societies.
+          </p>
+          <div>
+            <span class="tech-pill">Python Flask</span>
+            <span class="tech-pill">MongoDB</span>
+            <span class="tech-pill">GridFS</span>
+            <span class="tech-pill">HTML5</span>
+            <span class="tech-pill">CSS3</span>
+            <span class="tech-pill">JavaScript</span>
+          </div>
+        </div>
+
+        <div class="footer-links">
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="#home">Home</a></li>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#how-it-works">How It Works</a></li>
+            <li><a href="#roles">Roles</a></li>
+            <li><a href="{{ url_for('auth.login') }}">Login to Portal</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links">
+          <h4>Contact & Support</h4>
+          <ul>
+            <li><i class="fa-solid fa-location-dot" style="color: #60a5fa; margin-right: 6px;"></i> Greenwood Tower, Chennai</li>
+            <li><i class="fa-solid fa-phone" style="color: #60a5fa; margin-right: 6px;"></i> +91 98400 12345</li>
+            <li><i class="fa-solid fa-envelope" style="color: #60a5fa; margin-right: 6px;"></i> support@greenwood.com</li>
+            <li><i class="fa-solid fa-clock" style="color: #60a5fa; margin-right: 6px;"></i> 24/7 Security Gate Active</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2026 Greenwood Apartment Residential Management Portal. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

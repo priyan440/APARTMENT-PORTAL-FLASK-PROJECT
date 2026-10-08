@@ -7,6 +7,10 @@ auth_bp = Blueprint("auth", __name__)
 
 @auth_bp.route("/")
 def index():
+    return render_template("landing.html")
+
+@auth_bp.route("/dashboard")
+def role_dashboard_redirect():
     if "user_id" in session:
         role_dashboards = {
             "ADMIN": "admin.dashboard",
@@ -21,7 +25,7 @@ def index():
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if "user_id" in session:
-        return redirect(url_for("auth.index"))
+        return redirect(url_for("auth.role_dashboard_redirect"))
 
     if request.method == "POST":
         identifier = request.form.get("identifier", "").strip()
