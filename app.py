@@ -66,7 +66,24 @@ def create_app():
                 return val
         return val.strftime(fmt)
 
+    # Prevent caching of HTML responses to prevent stale back-button access after logout
+    @app.after_request
+    def add_security_and_cache_headers(response):
+        if "text/html" in response.headers.get("Content-Type", ""):
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+        return response
+
     # Friendly Error Handlers
+    @app.errorhandler(400)
+    def bad_request(e):
+        return render_template("errors/404.html"), 400
+
+    @app.errorhandler(401)
+    def unauthorized(e):
+        return render_template("errors/403.html"), 401
+
     @app.errorhandler(404)
     def page_not_found(e):
         return render_template("errors/404.html"), 404
@@ -74,6 +91,10 @@ def create_app():
     @app.errorhandler(403)
     def forbidden(e):
         return render_template("errors/403.html"), 403
+
+    @app.errorhandler(405)
+    def method_not_allowed(e):
+        return render_template("errors/404.html"), 405
 
     @app.errorhandler(500)
     def server_error(e):

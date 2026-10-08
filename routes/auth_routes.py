@@ -37,6 +37,7 @@ def login():
             return render_template("auth/login.html", identifier=identifier)
 
         # Set session
+        session.permanent = True
         session["user_id"] = user["user_id"]
         session["name"] = user["name"]
         session["email"] = user["email"]

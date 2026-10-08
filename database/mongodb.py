@@ -9,7 +9,13 @@ _fs = None
 def get_mongo_client():
     global _client
     if _client is None:
-        _client = MongoClient(Config.MONGO_URI)
+        try:
+            _client = MongoClient(Config.MONGO_URI, serverSelectionTimeoutMS=5000)
+            _client.admin.command('ping')
+            print("MongoDB connection successful")
+        except Exception as e:
+            print(f"MongoDB connection failed: {e}")
+            raise
     return _client
 
 def get_db():

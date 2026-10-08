@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -9,3 +10,6 @@ class Config:
     DB_NAME = os.getenv("DB_NAME", "apartment_management_db")
     PENDING_BOOKING_EXPIRY_MINUTES = int(os.getenv("PENDING_BOOKING_EXPIRY_MINUTES", "60"))
     MAX_CONTENT_LENGTH = 32 * 1024 * 1024  # 32MB max upload for GridFS media
+    PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"

@@ -85,7 +85,9 @@ def create_user(data: dict, creator_role: str = None) -> tuple[bool, str, dict]:
         })
 
     try:
-        db.users.insert_one(user_doc)
+        result = db.users.insert_one(user_doc)
+        if not result.inserted_id:
+            return False, "Failed to save user account to database.", None
 
         if role == "RESIDENT":
             # Sync to residents collection
@@ -102,7 +104,7 @@ def create_user(data: dict, creator_role: str = None) -> tuple[bool, str, dict]:
                 "created_at": user_doc["created_at"],
                 "updated_at": user_doc["updated_at"]
             }
-            db.residents.update_one(
+            res_result = db.residents.update_one(
                 {"user_id": user_id},
                 {"$set": resident_doc},
                 upsert=True
@@ -114,6 +116,17 @@ def create_user(data: dict, creator_role: str = None) -> tuple[bool, str, dict]:
                     {"flat_number": flat_no},
                     {"$set": {"status": "OCCUPIED", "resident_id": user_id, "resident_name": user_doc["name"]}}
                 )
+
+        # Verification step: Ensure record is actually retrievable from MongoDB
+        verified_user = db.users.find_one({"user_id": user_id})
+        if not verified_user:
+            # Rollback if verification failed
+            db.users.delete_one({"user_id": user_id})
+            if role == "RESIDENT":
+                db.residents.delete_one({"user_id": user_id})
+                if flat_no:
+                    db.flats.update_one({"flat_number": flat_no}, {"$set": {"status": "VACANT", "resident_id": None, "resident_name": None}})
+            return False, "Database verification failed after user creation.", None
 
         return True, f"User {user_id} created successfully.", user_doc
 
@@ -158,13 +171,14 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if "user_id" not in session:
-            flash("Please log in to access this page.", "warning")
+            session.clear()
+            flash("Your session has expired. Please log in again.", "warning")
             return redirect(url_for("auth.login", next=request.url))
         db = get_db()
         user = db.users.find_one({"user_id": session.get("user_id"), "status": "ACTIVE"})
         if not user:
             session.clear()
-            flash("Session expired or user account not found. Please log in again.", "warning")
+            flash("Your session has expired. Please log in again.", "warning")
             return redirect(url_for("auth.login"))
         return f(*args, **kwargs)
     return decorated_function
@@ -174,13 +188,14 @@ def role_required(*roles):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             if "user_id" not in session:
-                flash("Please log in to access this page.", "warning")
+                session.clear()
+                flash("Your session has expired. Please log in again.", "warning")
                 return redirect(url_for("auth.login", next=request.url))
             db = get_db()
             user = db.users.find_one({"user_id": session.get("user_id"), "status": "ACTIVE"})
             if not user:
                 session.clear()
-                flash("Session expired or user account not found. Please log in again.", "warning")
+                flash("Your session has expired. Please log in again.", "warning")
                 return redirect(url_for("auth.login"))
             user_role = user.get("role") or session.get("role")
             if user_role not in roles:
