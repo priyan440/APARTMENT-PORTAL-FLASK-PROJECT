@@ -164,26 +164,36 @@ def update_vendor(manager_user: dict, vendor_id: str, data: dict) -> tuple[bool,
     category = data.get("category", vendor["service"]["category"]).strip()
     description = data.get("description", vendor["service"].get("description", "")).strip()
 
+    existing_contract = vendor.get("contract") or {}
+    existing_company = vendor.get("company") or {}
+    existing_service = vendor.get("service") or {}
+
     try:
-        contract_amount = float(data.get("contract_amount", vendor["contract"].get("amount", 0)))
+        contract_amount = float(data.get("contract_amount", existing_contract.get("amount", 0)))
     except (ValueError, TypeError):
-        contract_amount = vendor["contract"].get("amount", 0)
+        contract_amount = float(existing_contract.get("amount", 0) or 0)
 
     update_fields = {
-        "company.name": company_name,
-        "company.contact_person": contact_person,
-        "company.phone": phone,
-        "company.email": email,
-        "company.address": data.get("address", vendor["company"].get("address", "")).strip(),
-        "company.city": data.get("city", vendor["company"].get("city", "Coimbatore")).strip(),
-        "company.state": data.get("state", vendor["company"].get("state", "Tamil Nadu")).strip(),
-        "service.category": category,
-        "service.description": description,
-        "service.availability": data.get("service_availability", vendor["service"].get("availability", "24x7")).strip(),
-        "contract.start_date": data.get("contract_start_date", vendor["contract"].get("start_date")),
-        "contract.end_date": data.get("contract_end_date", vendor["contract"].get("end_date")),
-        "contract.payment_frequency": data.get("payment_frequency", vendor["contract"].get("payment_frequency", "MONTHLY")),
-        "contract.amount": contract_amount,
+        "company": {
+            "name": company_name,
+            "contact_person": contact_person,
+            "phone": phone,
+            "email": email,
+            "address": data.get("address", existing_company.get("address", "")).strip(),
+            "city": data.get("city", existing_company.get("city", "Coimbatore")).strip(),
+            "state": data.get("state", existing_company.get("state", "Tamil Nadu")).strip(),
+        },
+        "service": {
+            "category": category,
+            "description": description,
+            "availability": data.get("service_availability", existing_service.get("availability", "24x7")).strip(),
+        },
+        "contract": {
+            "start_date": data.get("contract_start_date", existing_contract.get("start_date")),
+            "end_date": data.get("contract_end_date", existing_contract.get("end_date")),
+            "payment_frequency": data.get("payment_frequency", existing_contract.get("payment_frequency", "MONTHLY")),
+            "amount": contract_amount,
+        },
         "gst_number": data.get("gst_number", vendor.get("gst_number", "")).strip(),
         "emergency_contact": data.get("emergency_contact", vendor.get("emergency_contact", "")).strip(),
         "updated_at": datetime.now()
@@ -305,14 +315,16 @@ def create_vendor_contract(manager_user: dict, vendor_id: str, data: dict, contr
 
     db.vendor_contracts.insert_one(contract_doc)
 
-    # Sync vendor master contract summary
+    # Sync vendor master contract summary safely
     db.vendors.update_one(
         {"vendor_id": vendor_id},
         {"$set": {
-            "contract.start_date": start_date,
-            "contract.end_date": end_date,
-            "contract.amount": amount,
-            "contract.payment_frequency": contract_doc["payment_frequency"],
+            "contract": {
+                "start_date": start_date,
+                "end_date": end_date,
+                "amount": amount,
+                "payment_frequency": contract_doc["payment_frequency"]
+            },
             "updated_at": now
         }}
     )
@@ -371,13 +383,16 @@ def renew_vendor_contract(manager_user: dict, contract_id: str, data: dict) -> t
     }
     db.vendor_contracts.insert_one(new_contract)
 
-    # Update vendor master
+    # Update vendor master safely
     db.vendors.update_one(
         {"vendor_id": old_contract["vendor_id"]},
         {"$set": {
-            "contract.start_date": old_contract["end_date"],
-            "contract.end_date": new_end_date,
-            "contract.amount": new_amount,
+            "contract": {
+                "start_date": old_contract["end_date"],
+                "end_date": new_end_date,
+                "amount": new_amount,
+                "payment_frequency": new_contract["payment_frequency"]
+            },
             "updated_at": datetime.now()
         }}
     )
